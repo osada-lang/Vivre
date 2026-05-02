@@ -1,0 +1,16 @@
+# Dependency
+node_modules/
+
+# Build outputs
+android/app/build/
+android/.gradle/
+ios/App/build/
+ios/App/Pods/
+www/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Config
+.env

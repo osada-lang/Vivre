@@ -154,6 +154,30 @@ document.getElementById('update-now-btn').addEventListener('click', () => {
 });
 
 // --- Utils ---
+function resetStateAndGoHome() {
+    // セッション情報のクリア
+    if (watchId) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+    }
+    if (currentRoomId) {
+        db.ref(`rooms/${currentRoomId}`).off();
+        db.ref(`rooms/${currentRoomId}/followers/${myUserId}`).remove();
+    }
+    
+    // 変数のリセット
+    myMode = null;
+    currentRoomId = null;
+    masterLocation = null;
+    myLocation = { lat: null, lng: null };
+    
+    // UIのリセット
+    document.getElementById('vivre-card').classList.remove('burning');
+    if (debugInfoEl) debugInfoEl.textContent = '';
+    
+    showScreen('home');
+}
+
 function showScreen(name) {
     Object.keys(screens).forEach(key => {
         screens[key].classList.toggle('hidden', key !== name);
@@ -208,7 +232,7 @@ function startMasterSession(roomId) {
 document.getElementById('stop-master-btn').addEventListener('click', () => {
     if (confirm('共有を終了しますか？参加者全員のカードが燃え尽きます。')) {
         db.ref(`rooms/${currentRoomId}`).remove();
-        location.reload();
+        resetStateAndGoHome();
     }
 });
 
@@ -269,7 +293,7 @@ async function startFollowerSession(roomId) {
             } else {
                 // 万が一マスターの位置が取れる前にルームが消えた場合
                 alert("ルームが終了しました。");
-                location.reload();
+                resetStateAndGoHome();
             }
             return;
         }
@@ -323,11 +347,11 @@ document.getElementById('burn-retry-btn').addEventListener('click', () => {
 });
 
 document.getElementById('burn-close-btn').addEventListener('click', () => {
-    location.reload();
+    resetStateAndGoHome();
 });
 
 document.getElementById('stop-follow-btn').addEventListener('click', () => {
-    location.reload();
+    resetStateAndGoHome();
 });
 
 // --- Logic ---

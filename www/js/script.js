@@ -26,8 +26,8 @@ let myHeading = 0;
 let watchId = null;
 
 // --- Version Management ---
-const APP_VERSION = '1.0.0'; // 現在のアプリバージョン
-let latestVersion = '1.0.0';
+const APP_VERSION = '1.0.1'; // 現在のアプリバージョン
+let latestVersion = '1.0.1';
 
 // --- Wait Utility ---
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));

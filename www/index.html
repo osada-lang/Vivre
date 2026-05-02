@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Vivre - 導きのカード</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- Brand Splash Screen -->
+        <div id="brand-splash">
+            <img src="assets/images/brand_logo.png" alt="Brand Logo" id="brand-logo">
+        </div>
+
+        <!-- 1. 初期選択画面 -->
+        <div id="home-screen" class="screen">
+            <div class="glass-card">
+                <div class="logo-area">
+                    <div class="sonar-wrapper">
+                        <div class="sonar-wave"></div>
+                        <div class="sonar-wave"></div>
+                        <div class="sonar-wave"></div>
+                        <img src="assets/images/home_visual.png" alt="Vivre Visual" id="home-visual">
+                    </div>
+                </div>
+                <p class="subtitle">大切な人へ、方位で導く</p>
+                <div class="menu-group">
+                    <button id="mode-master-btn" class="primary-btn">合言葉を発行する<br><span class="btn-desc">（あなたが親になります）</span></button>
+                    <button id="mode-follower-btn" class="secondary-btn">合言葉を入力する<br><span class="btn-desc">（相手を追いかけます）</span></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 参加入力画面 (子) -->
+        <div id="join-screen" class="screen hidden">
+            <div class="glass-card">
+                <button class="back-btn" id="join-back-btn">← 戻る</button>
+                <h2>参加する</h2>
+                <p class="subtitle">共有された合言葉を入力</p>
+                <div class="input-group">
+                    <input type="number" id="room-id-input" placeholder="000000" pattern="\d*" inputmode="numeric">
+                    <button id="start-follow-btn" class="primary-btn">接続する</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. マスター画面 (親) -->
+        <div id="master-screen" class="screen hidden">
+            <div class="top-nav">
+                <div class="room-badge">合言葉: <span id="master-room-id">------</span></div>
+                <button id="stop-master-btn" class="danger-btn">共有を終了</button>
+            </div>
+            
+            <div class="main-display">
+                <div class="pulse-container">
+                    <div class="pulse-ring"></div>
+                    <div class="pulse-ring"></div>
+                    <div class="vivre-card-mini"></div>
+                </div>
+                <div class="status-info">
+                    <h3 id="follower-count">0</h3>
+                    <p>人があなたを追跡中</p>
+                </div>
+            </div>
+            
+            <div class="bottom-tips">
+                <p>アプリを閉じると共有が停止します</p>
+            </div>
+        </div>
+
+        <!-- 4. フォロワー画面 (子) -->
+        <div id="follower-screen" class="screen hidden">
+            <div class="top-nav">
+                <div class="room-badge">追跡中: <span id="follower-room-id">------</span></div>
+                <button id="stop-follow-btn" class="secondary-btn">終了</button>
+            </div>
+            
+            <div class="main-display">
+                <div class="pulse-container">
+                    <div class="pulse-ring"></div>
+                    <div class="pulse-ring"></div>
+                    <div id="vivre-card">
+                        <div class="card-burn-effect"></div>
+                        <div class="card-inner">
+                            <div class="arrow"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="status-info">
+                    <div class="distance-display">
+                        <span id="distance-value">---</span>
+                        <span id="distance-unit">km</span>
+                    </div>
+                    <p id="connection-status">相手の位置を探しています...</p>
+                </div>
+            </div>
+
+            <!-- デバッグ情報表示用 (一時的) -->
+            <div id="debug-info" style="font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 10px; font-family: monospace; text-align: center;"></div>
+        </div>
+
+        <!-- 5. 燃え尽きる演出用オーバーレイ -->
+        <div id="burn-overlay" class="screen hidden">
+            <div class="burn-content">
+                <div class="ash-particles"></div>
+                <p>カードが燃え尽きました</p>
+                <div class="menu-group">
+                    <button id="burn-retry-btn" class="primary-btn">もう一度入力する</button>
+                    <button id="burn-close-btn" class="secondary-btn">ホームへ戻る</button>
+                </div>
+            </div>
+        </div>
+        <!-- Update Notification Overlay -->
+        <div id="update-overlay" class="screen hidden" style="background: rgba(0,0,0,0.8); z-index: 20000; justify-content: center; align-items: center;">
+            <div class="glass-card" style="max-width: 85%;">
+                <h2>アップデートのお知らせ</h2>
+                <p class="subtitle">新しいバージョンがあります。<br>最新版にアップデートして、より快適に使いましょう！</p>
+                <div class="menu-group">
+                    <button id="update-now-btn" class="primary-btn">今すぐ更新</button>
+                    <button id="update-later-btn" class="secondary-btn">あとで</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-remote-config-compat.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>

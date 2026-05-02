@@ -6,7 +6,6 @@ android/app/build/
 android/.gradle/
 ios/App/build/
 ios/App/Pods/
-www/
 
 # OS files
 .DS_Store
@@ -14,3 +13,7 @@ Thumbs.db
 
 # Config
 .env
+
+# Tools & Temp
+process_image.py
+www/assets/images/home_visual_orig.png

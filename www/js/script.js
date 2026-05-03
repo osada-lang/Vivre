@@ -365,19 +365,11 @@ document.getElementById('share-app-btn').addEventListener('click', async () => {
 
 // 使い方ボタン
 document.getElementById('how-to-use-btn').addEventListener('click', () => {
-    alert('【基本的な使い方】\n' +
-          '1. 発行する：集合場所となる人が「ビブルカードを発行」し、表示された6桁の番号を仲間に伝えます。\n' +
-          '2. 受け取る：向かう人は「ビブルカードを受け取る」から、教えてもらった番号を入力して接続します。\n' +
-          '3. 進む：向かう人は画面に現れる「矢印」の方向へ進むだけで、仲間の場所に辿り着けます。\n\n' +
-          '【各モードの説明】\n' +
-          '●通常モード：複数の仲間が、発行した1人の場所へ集まる際に使用します。\n' +
-          '●双方向モード：1対1で、お互いの位置をリアルタイムに確認し合います。\n\n' +
-          '【オススメ利用シーン】\n' +
-          '・通常：お祭り、花火大会、イベント会場での多人数合流に。\n' +
-          '・双方向：2人での待ち合わせ、デパートや公園ではぐれた時に。\n\n' +
-          '【重要：導きを止めないために】\n' +
-          '・アプリを閉じてもバックグラウンドで動作し続け、仲間を導き続けます。\n' +
-          '・終了時はアプリを消す（キル）のではなく、必ず画面内の「共有停止」を押してください。');
+    showScreen('help');
+});
+
+document.getElementById('help-back-btn').addEventListener('click', () => {
+    showScreen('home');
 });
 
 async function startMasterSession(roomId) {

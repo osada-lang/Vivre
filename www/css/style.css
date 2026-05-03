@@ -373,7 +373,143 @@ button:active { transform: scale(0.97); opacity: 0.8; }
 .status-info p, #connection-status { color: var(--text-sub); font-size: 16px; margin-top: 8px; }
 .distance-display #distance-unit { font-size: 20px; color: var(--text-sub); margin-left: 4px; }
 
-/* Burn Effect */
+/* Help Screen */
+.help-card {
+    height: 85%;
+    max-height: 600px;
+    padding: 0 !important;
+}
+
+.help-scroll-area {
+    padding: 30px 20px;
+    height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.help-scroll-area h2 {
+    margin-bottom: 25px;
+    background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.help-section {
+    text-align: left;
+    margin-bottom: 30px;
+}
+
+.help-section h3 {
+    font-size: 18px;
+    color: var(--accent-color);
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.help-section h3::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 18px;
+    background: var(--accent-color);
+    border-radius: 2px;
+}
+
+.step-item {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.step-num {
+    background: var(--accent-color);
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.step-text strong {
+    display: block;
+    font-size: 16px;
+    margin-bottom: 4px;
+}
+
+.step-text p {
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
+    line-height: 1.5;
+}
+
+.mode-desc {
+    margin-bottom: 15px;
+}
+
+.mode-desc strong {
+    display: block;
+    margin-bottom: 4px;
+    color: rgba(255,255,255,0.9);
+}
+
+.mode-desc p {
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
+    line-height: 1.5;
+}
+
+.help-section ul {
+    list-style: none;
+    padding: 0;
+}
+
+.help-section li {
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
+
+.help-section.important {
+    background: rgba(255, 59, 48, 0.1);
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 59, 48, 0.2);
+}
+
+.help-section.important h3 {
+    color: #ff3b30;
+}
+
+.help-section.important h3::before {
+    background: #ff3b30;
+}
+
+.help-section.important p {
+    font-size: 13px;
+    color: rgba(255,255,255,0.8);
+    margin-bottom: 8px;
+}
+
+.help-scroll-area::-webkit-scrollbar {
+    width: 4px;
+}
+
+.help-scroll-area::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.05);
+}
+
+.help-scroll-area::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+}
 .card-burn-effect {
     position: absolute;
     inset: 0;

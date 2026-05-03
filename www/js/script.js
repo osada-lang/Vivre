@@ -24,6 +24,8 @@ let masterLocation = null;
 let myLocation = { lat: null, lng: null };
 let myHeading = 0;
 let watchId = null;
+let heartbeatInterval = null;
+let watchdogInterval = null;
 
 // Capacitor Plugins
 // 実行時に安全に取得するためのヘルパー
@@ -183,6 +185,14 @@ function resetStateAndGoHome() {
         BackgroundGeolocation.removeWatcher({ id: watchId });
         watchId = null;
     }
+    if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+        heartbeatInterval = null;
+    }
+    if (watchdogInterval) {
+        clearInterval(watchdogInterval);
+        watchdogInterval = null;
+    }
     if (currentRoomId) {
         db.ref(`rooms/${currentRoomId}`).off();
         db.ref(`rooms/${currentRoomId}/followers/${myUserId}`).remove();
@@ -314,6 +324,15 @@ async function startMasterSession(roomId) {
 
         // 自分の位置情報を定期的に更新 (バックグラウンド対応)
         const BackgroundGeolocation = getCapPlugin('BackgroundGeolocation');
+        
+        // ハートビート開始 (5秒おきに timestamp を更新)
+        if (heartbeatInterval) clearInterval(heartbeatInterval);
+        heartbeatInterval = setInterval(() => {
+            if (currentRoomId) {
+                masterPosRef.child('heartbeat').set(Date.now());
+            }
+        }, 5000);
+
         if (BackgroundGeolocation) {
             try {
                 // .then() ではなく await を使用して、Promiseを返さない環境でもエラーを防ぐ
@@ -428,6 +447,12 @@ async function startFollowerSession(roomId) {
             const roomData = snapshot.val();
             if (roomData.master) {
                 masterLocation = roomData.master;
+                // ハートビート情報の保存
+                if (roomData.master.heartbeat) {
+                    masterLocation.lastHeartbeat = roomData.master.heartbeat;
+                } else {
+                    masterLocation.lastHeartbeat = roomData.master.timestamp || Date.now();
+                }
                 updateDisplay();
                 showScreen('follower');
             } else {
@@ -435,6 +460,23 @@ async function startFollowerSession(roomId) {
                 showScreen('follower');
             }
         });
+
+        // 3. ウォッチドッグ (ハートビート監視: 2秒おきにチェック)
+        if (watchdogInterval) clearInterval(watchdogInterval);
+        watchdogInterval = setInterval(() => {
+            if (myMode === 'follower' && masterLocation && masterLocation.lastHeartbeat) {
+                const now = Date.now();
+                const diff = now - masterLocation.lastHeartbeat;
+                
+                // 15秒以上更新がなければ「燃え尽き」と判定 (ネットワークの揺らぎを考慮して少し余裕を持つ)
+                if (diff > 15000) {
+                    console.log("Heartbeat lost. Diff:", diff);
+                    clearInterval(watchdogInterval);
+                    watchdogInterval = null;
+                    triggerBurnEffect();
+                }
+            }
+        }, 2000);
 
         // 自分の位置取得 (バックグラウンド対応)
         myLocation = { lat: null, lng: null };

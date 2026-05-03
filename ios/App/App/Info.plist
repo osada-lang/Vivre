@@ -7,21 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>Vivre Card</string>
-	<key>CFBundleDisplayName</key>
 	<string>Vivre Card</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>相手との距離と方向を計算するために位置情報を使用します。</string>
-	<key>NSLocationAlwaysUsageDescription</key>
-	<string>画面ロック中やバックグラウンドでも、仲間にあなたの位置を知らせ続けるために使用します。</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>画面ロック中やバックグラウンドでも、仲間にあなたの位置を知らせ続けるために使用します。</string>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>location</string>
-	</array>
-	<key>NSMotionUsageDescription</key>
-	<string>方位磁石（コンパス）を使用して正しい方向を指し示すために使用します。</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

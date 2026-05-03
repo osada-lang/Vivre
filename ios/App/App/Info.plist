@@ -7,6 +7,8 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
+        <string>Vivre Card</string>
+	<key>CFBundleDisplayName</key>
 	<string>Vivre Card</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>相手との距離と方向を計算するために位置情報を使用します。</string>

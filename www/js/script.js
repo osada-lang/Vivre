@@ -217,13 +217,13 @@ const APP_SHARE_URL = 'https://osada-lang.github.io/Vivre/';
 // Capacitor Plugins
 // (既に上部で宣言済み: Share, BackgroundGeolocation, LocalNotifications)
 
-document.getElementById('mode-master-btn').addEventListener('click', () => {
+document.getElementById('mode-master-btn').addEventListener('click', async () => {
     myMode = 'master';
     const roomId = Math.floor(100000 + Math.random() * 900000).toString();
     currentRoomId = roomId;
     document.getElementById('master-room-id').textContent = roomId;
     
-    startMasterSession(roomId);
+    await startMasterSession(roomId);
     showScreen('master');
 });
 
@@ -294,7 +294,7 @@ document.getElementById('how-to-use-btn').addEventListener('click', () => {
     alert('【使い方】\n1. 仲間を集めたい人が「ビブルカードを発行」します。\n2. 発行された6桁のコードを仲間（複数人可）に共有します。\n3. 向かいたい人は「ビブルカードを受け取る」からコードを入力します。\n4. 矢印が指す方向へ進めば、仲間に辿り着けます。');
 });
 
-function startMasterSession(roomId) {
+async function startMasterSession(roomId) {
     try {
         console.log("Starting master session for room:", roomId);
         const roomRef = db.ref(`rooms/${roomId}`);
@@ -315,34 +315,36 @@ function startMasterSession(roomId) {
         // 自分の位置情報を定期的に更新 (バックグラウンド対応)
         const BackgroundGeolocation = getCapPlugin('BackgroundGeolocation');
         if (BackgroundGeolocation) {
-            BackgroundGeolocation.addWatcher(
-                {
-                    backgroundMessage: "ビブルカードを共有中... 画面を閉じても共有は続きます。",
-                    backgroundTitle: "Vivre Card 位置共有中",
-                    requestPermissions: true,
-                    stale: false,
-                    distanceFilter: 2 // 2メートル移動ごとに更新
-                },
-                function callback(location, error) {
-                    if (error) {
-                        if (error.code === "NOT_AUTHORIZED") {
-                            if (confirm("位置情報の権限が必要です。設定を開きますか？")) {
-                                BackgroundGeolocation.openSettings();
+            try {
+                // .then() ではなく await を使用して、Promiseを返さない環境でもエラーを防ぐ
+                watchId = await BackgroundGeolocation.addWatcher(
+                    {
+                        backgroundMessage: "ビブルカードを共有中... 画面を閉じても共有は続きます。",
+                        backgroundTitle: "Vivre Card 位置共有中",
+                        requestPermissions: true,
+                        stale: false,
+                        distanceFilter: 2 // 2メートル移動ごとに更新
+                    },
+                    function callback(location, error) {
+                        if (error) {
+                            if (error.code === "NOT_AUTHORIZED") {
+                                if (confirm("位置情報の権限が必要です。設定を開きますか？")) {
+                                    BackgroundGeolocation.openSettings();
+                                }
                             }
+                            return console.error(error);
                         }
-                        return console.error(error);
+                        if (location) {
+                            const data = { lat: location.latitude, lng: location.longitude, timestamp: Date.now() };
+                            masterPosRef.set(data);
+                        }
                     }
-                    if (location) {
-                        const data = { lat: location.latitude, lng: location.longitude, timestamp: Date.now() };
-                        masterPosRef.set(data);
-                    }
-                }
-            ).then(id => {
-                watchId = id;
-            }).catch(e => {
+                );
+                console.log("BackgroundGeolocation watcher added:", watchId);
+            } catch (e) {
                 console.error("BackgroundGeolocation error:", e);
-                alert("GPS開始エラー: " + e.message);
-            });
+                alert("GPS開始エラー: " + (e.message || e));
+            }
         } else {
             // プラグインがない場合のフォールバック（ブラウザ等）
             if ("geolocation" in navigator) {
@@ -383,15 +385,11 @@ document.getElementById('join-back-btn').addEventListener('click', () => {
     showScreen('home');
 });
 
-document.getElementById('start-follow-btn').addEventListener('click', () => {
+document.getElementById('start-follow-btn').addEventListener('click', async () => {
     const roomId = document.getElementById('room-id-input').value.trim();
     if (!roomId || roomId.length !== 6) return alert('6桁のビブルカード（合言葉）を入力してください');
     
-    myMode = 'follower';
-    currentRoomId = roomId;
-    document.getElementById('follower-room-id').textContent = roomId;
-    
-    startFollowerSession(roomId);
+    await startFollowerSession(roomId);
 });
 
 async function startFollowerSession(roomId) {
@@ -443,31 +441,32 @@ async function startFollowerSession(roomId) {
 
         const BackgroundGeolocation = getCapPlugin('BackgroundGeolocation');
         if (watchId && BackgroundGeolocation) {
-            BackgroundGeolocation.removeWatcher({ id: watchId });
+            await BackgroundGeolocation.removeWatcher({ id: watchId });
             watchId = null;
         }
 
         if (BackgroundGeolocation) {
-            BackgroundGeolocation.addWatcher(
-                {
-                    backgroundMessage: "ビブルカードを使用中... 画面を閉じても目的地を指し示し続けます。",
-                    backgroundTitle: "Vivre Card 稼働中",
-                    requestPermissions: true,
-                    stale: false,
-                    distanceFilter: 2
-                },
-                function callback(location, error) {
-                    if (error) return console.error(error);
-                    if (location) {
-                        myLocation = { lat: location.latitude, lng: location.longitude };
-                        updateDisplay();
+            try {
+                watchId = await BackgroundGeolocation.addWatcher(
+                    {
+                        backgroundMessage: "ビブルカードを使用中... 画面を閉じても目的地を指し示し続けます。",
+                        backgroundTitle: "Vivre Card 稼働中",
+                        requestPermissions: true,
+                        stale: false,
+                        distanceFilter: 2
+                    },
+                    function callback(location, error) {
+                        if (error) return console.error(error);
+                        if (location) {
+                            myLocation = { lat: location.latitude, lng: location.longitude };
+                            updateDisplay();
+                        }
                     }
-                }
-            ).then(id => {
-                watchId = id;
-            }).catch(e => {
+                );
+            } catch (e) {
                 console.error("Follower GPS Error:", e);
-            });
+                // フォロワー側のエラーは致命的でないためalertは出さない
+            }
         } else {
             // ブラウザフォールバック
             if ("geolocation" in navigator) {

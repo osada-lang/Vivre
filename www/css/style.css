@@ -135,7 +135,7 @@ body {
     height: 100%;
     display: flex;
     flex-direction: column;
-    padding: 10px 20px 20px;
+    padding: 10px 20px 5px;
     transition: opacity 0.4s ease, transform 0.4s ease;
 }
 
@@ -263,7 +263,7 @@ button:active { transform: scale(0.97); opacity: 0.8; }
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
 }
 .room-badge {
     background: rgba(255,255,255,0.1);
@@ -286,7 +286,7 @@ button:active { transform: scale(0.97); opacity: 0.8; }
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
 }
 .pulse-ring {
     position: absolute;
@@ -348,7 +348,15 @@ button:active { transform: scale(0.97); opacity: 0.8; }
     background: #333 !important;
     animation: burn-card 1.5s forwards ease-in-out;
 }
-.status-info { text-align: center; }
+.status-info { 
+    text-align: center;
+    margin-bottom: 5px;
+}
+
+.share-area {
+    margin-top: 5px;
+}
+
 .bottom-tips {
     margin-top: auto;
     padding: 10px 0 10px;

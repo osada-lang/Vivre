@@ -168,6 +168,7 @@ const screens = {
     home: document.getElementById('home-screen'),
     modeSelect: document.getElementById('mode-select-screen'),
     join: document.getElementById('join-screen'),
+    help: document.getElementById('help-screen'),
     master: document.getElementById('master-screen'),
     follower: document.getElementById('follower-screen'),
     burn: document.getElementById('burn-overlay'),

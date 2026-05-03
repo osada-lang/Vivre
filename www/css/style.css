@@ -211,13 +211,26 @@ button {
     margin: 10px 0;
 }
 
+.mini-annotation {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.2);
+    margin-top: 15px;
+}
+
 .gradient-text {
-    background: linear-gradient(to bottom, #ffffff 0%, #0A84FF 100%);
+    background: linear-gradient(to right, #ffffff 0%, #0A84FF 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    font-size: 32px;
+    font-size: 24px;
     font-weight: bold;
+}
+
+.burn-supplement {
+    font-size: 14px;
+    color: #ffffff;
+    margin-top: 10px;
+    opacity: 0.8;
 }
 
 button:active { transform: scale(0.97); opacity: 0.8; }

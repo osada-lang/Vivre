@@ -228,9 +228,8 @@ button {
 
 .burn-supplement {
     font-size: 14px;
-    color: var(--text-sub);
+    color: #8E8E93;
     margin-top: 10px;
-    opacity: 0.8;
 }
 
 button:active { transform: scale(0.97); opacity: 0.8; }

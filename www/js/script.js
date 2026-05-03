@@ -26,7 +26,14 @@ let myHeading = 0;
 let watchId = null;
 
 // Capacitor Plugins
-const { Share, BackgroundGeolocation, LocalNotifications } = Capacitor.Plugins;
+// 実行時に安全に取得するためのヘルパー
+function getCapPlugin(name) {
+    if (typeof Capacitor !== 'undefined' && Capacitor.Plugins && Capacitor.Plugins[name]) {
+        return Capacitor.Plugins[name];
+    }
+    console.warn(`Capacitor Plugin "${name}" not found.`);
+    return null;
+}
 
 // --- Version Management ---
 const APP_VERSION = '1.0.1'; // 現在のアプリバージョン
@@ -81,9 +88,12 @@ window.addEventListener('load', async () => {
     const configPromise = initRemoteConfig();
     
     // 通知権限の要求 (Android 13+ でバックグラウンド通知を表示するために必要)
-    if (Capacitor.getPlatform() === 'android') {
+    if (typeof Capacitor !== 'undefined' && Capacitor.getPlatform() === 'android') {
         try {
-            await LocalNotifications.requestPermissions();
+            const LocalNotifications = getCapPlugin('LocalNotifications');
+            if (LocalNotifications) {
+                await LocalNotifications.requestPermissions();
+            }
         } catch (e) {
             console.warn("Notification permission request failed", e);
         }
@@ -168,7 +178,8 @@ document.getElementById('update-now-btn').addEventListener('click', () => {
 // --- Utils ---
 function resetStateAndGoHome() {
     // セッション情報のクリア
-    if (watchId) {
+    const BackgroundGeolocation = getCapPlugin('BackgroundGeolocation');
+    if (watchId && BackgroundGeolocation) {
         BackgroundGeolocation.removeWatcher({ id: watchId });
         watchId = null;
     }
@@ -220,7 +231,16 @@ document.getElementById('mode-master-btn').addEventListener('click', () => {
 document.getElementById('share-code-btn').addEventListener('click', async () => {
     if (!currentRoomId) return;
     
+    const Share = getCapPlugin('Share');
     const shareText = `わたしのビブルカード（合言葉）は【${currentRoomId}】です。\nアプリを開いて入力してね！\n\nアプリを持っていない方はこちら：\n${APP_SHARE_URL}`;
+    
+    if (!Share) {
+        try {
+            await navigator.clipboard.writeText(shareText);
+            alert('ビブルカードをコピーしました。LINE等に貼り付けて送ってください！');
+        } catch (err) { alert(shareText); }
+        return;
+    }
     
     try {
         await Share.share({
@@ -243,8 +263,14 @@ document.getElementById('share-code-btn').addEventListener('click', async () => 
 
 // アプリ自体の共有 (ホーム画面)
 document.getElementById('share-app-btn').addEventListener('click', async () => {
+    const Share = getCapPlugin('Share');
     const shareText = `大切な人へ、方位で導くアプリ「Vivre Card」\nこちらからインストールできます：\n${APP_SHARE_URL}`;
     
+    if (!Share) {
+        window.open(APP_SHARE_URL, '_system');
+        return;
+    }
+
     try {
         await Share.share({
             title: 'Vivre Card アプリ共有',
@@ -269,56 +295,76 @@ document.getElementById('how-to-use-btn').addEventListener('click', () => {
 });
 
 function startMasterSession(roomId) {
-    console.log("Starting master session for room:", roomId);
-    const roomRef = db.ref(`rooms/${roomId}`);
-    const masterPosRef = roomRef.child('master');
-    const followersRef = roomRef.child('followers');
+    try {
+        console.log("Starting master session for room:", roomId);
+        const roomRef = db.ref(`rooms/${roomId}`);
+        const masterPosRef = roomRef.child('master');
+        const followersRef = roomRef.child('followers');
 
-    // ★重要: update を使うことで、GPSデータが先に届いても消さないようにする
-    roomRef.update({
-        createdAt: Date.now(),
-        status: 'active'
-    }).then(() => {
-        console.log("Room initialized/updated in Firebase.");
-    }).catch(err => {
-        console.error("Firebase update error:", err);
-    });
+        // ★重要: update を使うことで、GPSデータが先に届いても消さないようにする
+        roomRef.update({
+            createdAt: Date.now(),
+            status: 'active'
+        }).then(() => {
+            console.log("Room initialized/updated in Firebase.");
+        }).catch(err => {
+            console.error("Firebase update error:", err);
+            // Firebaseが失敗しても画面遷移はさせる
+        });
 
-    // 自分の位置情報を定期的に更新 (バックグラウンド対応)
-    BackgroundGeolocation.addWatcher(
-        {
-            backgroundMessage: "ビブルカードを共有中... 画面を閉じても共有は続きます。",
-            backgroundTitle: "Vivre Card 位置共有中",
-            requestPermissions: true,
-            stale: false,
-            distanceFilter: 2 // 2メートル移動ごとに更新
-        },
-        function callback(location, error) {
-            if (error) {
-                if (error.code === "NOT_AUTHORIZED") {
-                    if (confirm("位置情報の権限が必要です。設定を開きますか？")) {
-                        BackgroundGeolocation.openSettings();
+        // 自分の位置情報を定期的に更新 (バックグラウンド対応)
+        const BackgroundGeolocation = getCapPlugin('BackgroundGeolocation');
+        if (BackgroundGeolocation) {
+            BackgroundGeolocation.addWatcher(
+                {
+                    backgroundMessage: "ビブルカードを共有中... 画面を閉じても共有は続きます。",
+                    backgroundTitle: "Vivre Card 位置共有中",
+                    requestPermissions: true,
+                    stale: false,
+                    distanceFilter: 2 // 2メートル移動ごとに更新
+                },
+                function callback(location, error) {
+                    if (error) {
+                        if (error.code === "NOT_AUTHORIZED") {
+                            if (confirm("位置情報の権限が必要です。設定を開きますか？")) {
+                                BackgroundGeolocation.openSettings();
+                            }
+                        }
+                        return console.error(error);
+                    }
+                    if (location) {
+                        const data = { lat: location.latitude, lng: location.longitude, timestamp: Date.now() };
+                        masterPosRef.set(data);
                     }
                 }
-                return console.error(error);
-            }
-            if (location) {
-                const data = { lat: location.latitude, lng: location.longitude, timestamp: Date.now() };
-                masterPosRef.set(data);
+            ).then(id => {
+                watchId = id;
+            }).catch(e => {
+                console.error("BackgroundGeolocation error:", e);
+                alert("GPS開始エラー: " + e.message);
+            });
+        } else {
+            // プラグインがない場合のフォールバック（ブラウザ等）
+            if ("geolocation" in navigator) {
+                watchId = navigator.geolocation.watchPosition(pos => {
+                    const data = { lat: pos.coords.latitude, lng: pos.coords.longitude, timestamp: Date.now() };
+                    masterPosRef.set(data);
+                }, err => console.error(err), { enableHighAccuracy: true });
             }
         }
-    ).then(id => {
-        watchId = id;
-    });
 
-    // フォロワー数の監視
-    followersRef.on('value', snapshot => {
-        const count = snapshot.numChildren();
-        document.getElementById('follower-count').textContent = count;
-    });
+        // フォロワー数の監視
+        followersRef.on('value', snapshot => {
+            const count = snapshot.numChildren();
+            document.getElementById('follower-count').textContent = count;
+        });
 
-    // 切断時にルームを削除
-    roomRef.onDisconnect().remove();
+        // 切断時にルームを削除
+        roomRef.onDisconnect().remove();
+    } catch (globalError) {
+        console.error("startMasterSession Global Error:", globalError);
+        alert("セッション開始エラー: " + globalError.message);
+    }
 }
 
 document.getElementById('stop-master-btn').addEventListener('click', () => {
@@ -349,90 +395,98 @@ document.getElementById('start-follow-btn').addEventListener('click', () => {
 });
 
 async function startFollowerSession(roomId) {
-    console.log("Starting follower session for room:", roomId);
-    const roomRef = db.ref(`rooms/${roomId}`);
-    
-    // 1. 最初に入力されたルームが存在するか一度だけ確認
     try {
+        console.log("Starting follower session for room:", roomId);
+        const roomRef = db.ref(`rooms/${roomId}`);
+        
+        // 1. 最初に入力されたルームが存在するか一度だけ確認
         const initialSnapshot = await roomRef.once('value');
         if (!initialSnapshot.exists()) {
             alert("存在しないビブルカードです。もう一度確認してください。");
-            return; // ここで終了し、入力画面に留まる
-        }
-    } catch (error) {
-        console.error("Firebase connection error:", error);
-        alert("接続エラーが発生しました。");
-        return;
-    }
-
-    myMode = 'follower';
-    currentRoomId = roomId;
-    document.getElementById('follower-room-id').textContent = roomId;
-
-    const myFollowerRef = roomRef.child('followers').child(myUserId);
-
-    // 自分の生存確認用データを登録 (位置は送らない)
-    myFollowerRef.set(true);
-    myFollowerRef.onDisconnect().remove();
-
-    // 2. ルーム全体をリアルタイム監視して、親の位置とルームの消滅を判定
-    roomRef.on('value', snapshot => {
-        if (!snapshot.exists()) {
-            console.log("Room deleted or doesn't exist.");
-            // 一度でもマスターの位置が取れている＝接続が確立していた後の消滅なので燃え尽き
-            if (masterLocation) {
-                triggerBurnEffect();
-            } else {
-                // 万が一マスターの位置が取れる前にルームが消えた場合
-                alert("ルームが終了しました。");
-                resetStateAndGoHome();
-            }
             return;
         }
 
-        const roomData = snapshot.val();
-        if (roomData.master) {
-            console.log("Master location received.");
-            masterLocation = roomData.master;
-            updateDisplay();
-            showScreen('follower');
-        } else {
-            console.log("Waiting for master location...");
-            connectionStatus.textContent = '相手のGPS信号を待っています...';
-            showScreen('follower');
-        }
-    });
+        myMode = 'follower';
+        currentRoomId = roomId;
+        document.getElementById('follower-room-id').textContent = roomId;
 
-    // 自分の位置取得 (計算用のみ。サーバーには送らない。バックグラウンド対応)
-    // 役割交代時に古い位置情報を引き継がないよう初期化
-    myLocation = { lat: null, lng: null };
+        const myFollowerRef = roomRef.child('followers').child(myUserId);
 
-    if (watchId) {
-        BackgroundGeolocation.removeWatcher({ id: watchId });
-        watchId = null;
-    }
+        // 自分の生存確認用データを登録 (位置は送らない)
+        myFollowerRef.set(true);
+        myFollowerRef.onDisconnect().remove();
 
-    BackgroundGeolocation.addWatcher(
-        {
-            backgroundMessage: "ビブルカードを使用中... 画面を閉じても目的地を指し示し続けます。",
-            backgroundTitle: "Vivre Card 稼働中",
-            requestPermissions: true,
-            stale: false,
-            distanceFilter: 2
-        },
-        function callback(location, error) {
-            if (error) return console.error(error);
-            if (location) {
-                myLocation = { lat: location.latitude, lng: location.longitude };
+        // 2. ルーム全体をリアルタイム監視
+        roomRef.on('value', snapshot => {
+            if (!snapshot.exists()) {
+                if (masterLocation) triggerBurnEffect();
+                else {
+                    alert("ルームが終了しました。");
+                    resetStateAndGoHome();
+                }
+                return;
+            }
+
+            const roomData = snapshot.val();
+            if (roomData.master) {
+                masterLocation = roomData.master;
                 updateDisplay();
+                showScreen('follower');
+            } else {
+                connectionStatus.textContent = '相手のGPS信号を待っています...';
+                showScreen('follower');
+            }
+        });
+
+        // 自分の位置取得 (バックグラウンド対応)
+        myLocation = { lat: null, lng: null };
+
+        const BackgroundGeolocation = getCapPlugin('BackgroundGeolocation');
+        if (watchId && BackgroundGeolocation) {
+            BackgroundGeolocation.removeWatcher({ id: watchId });
+            watchId = null;
+        }
+
+        if (BackgroundGeolocation) {
+            BackgroundGeolocation.addWatcher(
+                {
+                    backgroundMessage: "ビブルカードを使用中... 画面を閉じても目的地を指し示し続けます。",
+                    backgroundTitle: "Vivre Card 稼働中",
+                    requestPermissions: true,
+                    stale: false,
+                    distanceFilter: 2
+                },
+                function callback(location, error) {
+                    if (error) return console.error(error);
+                    if (location) {
+                        myLocation = { lat: location.latitude, lng: location.longitude };
+                        updateDisplay();
+                    }
+                }
+            ).then(id => {
+                watchId = id;
+            }).catch(e => {
+                console.error("Follower GPS Error:", e);
+            });
+        } else {
+            // ブラウザフォールバック
+            if ("geolocation" in navigator) {
+                watchId = navigator.geolocation.watchPosition(pos => {
+                    myLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                    updateDisplay();
+                }, err => {
+                    console.error("My GPS Error:", err);
+                    connectionStatus.textContent = '自分のGPS信号を探しています...';
+                }, { enableHighAccuracy: true });
             }
         }
-    ).then(id => {
-        watchId = id;
-    });
 
-    // コンパス
-    startOrientationTracking();
+        // コンパス
+        startOrientationTracking();
+    } catch (e) {
+        console.error("startFollowerSession Global Error:", e);
+        alert("参加エラー: " + e.message);
+    }
 }
 
 function triggerBurnEffect() {

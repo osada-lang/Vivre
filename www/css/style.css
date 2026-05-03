@@ -227,9 +227,14 @@ button {
 }
 
 .burn-supplement {
-    font-size: 14px;
-    color: #8E8E93;
-    margin-top: 10px;
+    font-size: 13px;
+    background: linear-gradient(to right, #ffffff 0%, #0A84FF 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-top: 8px;
+    margin-bottom: 40px;
+    letter-spacing: 0.05em;
 }
 
 button:active { transform: scale(0.97); opacity: 0.8; }
@@ -361,7 +366,6 @@ button:active { transform: scale(0.97); opacity: 0.8; }
     align-items: center;
 }
 .burn-content { text-align: center; }
-.burn-content p { font-size: 20px; margin-bottom: 40px; color: #ff6b00; }
 
 input[type="number"] {
     background: rgba(255,255,255,0.1);

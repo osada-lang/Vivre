@@ -354,12 +354,12 @@ button:active { transform: scale(0.97); opacity: 0.8; }
 }
 
 .share-area {
-    margin-top: 5px;
+    margin-top: 0;
 }
 
 .bottom-tips {
-    margin-top: auto;
-    padding: 10px 0 10px;
+    margin-top: 0;
+    padding: 0;
     text-align: center;
 }
 

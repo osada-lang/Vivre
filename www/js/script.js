@@ -217,12 +217,15 @@ document.getElementById('share-code-btn').addEventListener('click', async () => 
             dialogTitle: 'ビブルカードを仲間に送る'
         });
     } catch (e) {
-        console.log('Share failed', e);
-        // フォールバック: クリップボードコピー
-        try {
-            await navigator.clipboard.writeText(shareText);
-            alert('ビブルカードをコピーしました。LINE等に貼り付けて送ってください！');
-        } catch (err) { alert(shareText); }
+        // ユーザーが共有をキャンセルした場合はエラーを投げることがあるため、それを無視
+        // ただし、環境的に共有がサポートされていない等の真のエラーの場合のみフォールバックを実行
+        if (e.message !== 'Share canceled' && e.name !== 'AbortError') {
+            console.log('Share failed', e);
+            try {
+                await navigator.clipboard.writeText(shareText);
+                alert('ビブルカードをコピーしました。LINE等に貼り付けて送ってください！');
+            } catch (err) { alert(shareText); }
+        }
     }
 });
 
@@ -238,11 +241,13 @@ document.getElementById('share-app-btn').addEventListener('click', async () => {
             dialogTitle: 'Vivre Card を仲間に教える'
         });
     } catch (e) {
-        console.log('Share failed', e);
-        try {
-            await navigator.clipboard.writeText(shareText);
-            alert('アプリ紹介URLをコピーしました。仲間に送ってあげてください！');
-        } catch (err) { window.open(APP_SHARE_URL, '_system'); }
+        if (e.message !== 'Share canceled' && e.name !== 'AbortError') {
+            console.log('Share failed', e);
+            try {
+                await navigator.clipboard.writeText(shareText);
+                alert('アプリ紹介URLをコピーしました。仲間に送ってあげてください！');
+            } catch (err) { window.open(APP_SHARE_URL, '_system'); }
+        }
     }
 });
 

@@ -191,6 +191,9 @@ function showScreen(name) {
 // --- Master Mode ---
 const APP_SHARE_URL = 'https://osada-lang.github.io/Vivre/';
 
+// Capacitor Plugins
+const { Share } = Capacitor.Plugins;
+
 document.getElementById('mode-master-btn').addEventListener('click', () => {
     myMode = 'master';
     const roomId = Math.floor(100000 + Math.random() * 900000).toString();
@@ -207,19 +210,19 @@ document.getElementById('share-code-btn').addEventListener('click', async () => 
     
     const shareText = `わたしのビブルカード（合言葉）は【${currentRoomId}】です。\nアプリを開いて入力してね！\n\nアプリを持っていない方はこちら：\n${APP_SHARE_URL}`;
     
-    if (navigator.share) {
-        try {
-            await navigator.share({
-                title: 'Vivre Card 共有',
-                text: shareText
-            });
-        } catch (e) { console.log('Share failed', e); }
-    } else {
+    try {
+        await Share.share({
+            title: 'ビブルカード共有',
+            text: shareText,
+            dialogTitle: 'ビブルカードを仲間に送る'
+        });
+    } catch (e) {
+        console.log('Share failed', e);
         // フォールバック: クリップボードコピー
         try {
             await navigator.clipboard.writeText(shareText);
             alert('ビブルカードをコピーしました。LINE等に貼り付けて送ってください！');
-        } catch (e) { alert(shareText); }
+        } catch (err) { alert(shareText); }
     }
 });
 
@@ -227,18 +230,19 @@ document.getElementById('share-code-btn').addEventListener('click', async () => 
 document.getElementById('share-app-btn').addEventListener('click', async () => {
     const shareText = `大切な人へ、方位で導くアプリ「Vivre Card」\nこちらからインストールできます：\n${APP_SHARE_URL}`;
     
-    if (navigator.share) {
-        try {
-            await navigator.share({
-                title: 'Vivre Card アプリ共有',
-                text: shareText
-            });
-        } catch (e) { console.log('Share failed', e); }
-    } else {
+    try {
+        await Share.share({
+            title: 'Vivre Card アプリ共有',
+            text: shareText,
+            url: APP_SHARE_URL,
+            dialogTitle: 'Vivre Card を仲間に教える'
+        });
+    } catch (e) {
+        console.log('Share failed', e);
         try {
             await navigator.clipboard.writeText(shareText);
             alert('アプリ紹介URLをコピーしました。仲間に送ってあげてください！');
-        } catch (e) { window.open(APP_SHARE_URL, '_system'); }
+        } catch (err) { window.open(APP_SHARE_URL, '_system'); }
     }
 });
 

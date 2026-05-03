@@ -68,8 +68,10 @@
                     <h3 id="follower-count">0</h3>
                     <p>人があなたを追跡中</p>
                 </div>
+                <!-- 注釈 -->
+                <p class="annotation-text">※このビブルカード（番号）を仲間に伝えてください。<br>アプリを閉じると共有は終了します。</p>
                 <!-- 共有ボタン -->
-                <button id="share-code-btn" class="primary-btn" style="margin-top: 30px; width: 80%;">ビブルカードを共有</button>
+                <button id="share-code-btn" class="primary-btn" style="margin-top: 20px; width: 80%;">ビブルカードを共有</button>
             </div>
             
             <div class="bottom-tips">
@@ -102,6 +104,7 @@
                         <span id="distance-unit">km</span>
                     </div>
                     <p id="connection-status">相手の位置を探しています...</p>
+                    <p class="annotation-text" style="margin-top: 15px;">※矢印は相手の場所を指し示しています。</p>
                 </div>
             </div>
 
@@ -113,7 +116,8 @@
         <div id="burn-overlay" class="screen hidden">
             <div class="burn-content">
                 <div class="ash-particles"></div>
-                <p>カードが燃え尽きました</p>
+                <h2 class="gradient-text">カードが燃え尽きました</h2>
+                <p class="subtitle" style="margin-top: 10px;">（共有が終了しました）</p>
                 <div class="menu-group">
                     <button id="burn-retry-btn" class="primary-btn">もう一度入力する</button>
                     <button id="burn-close-btn" class="secondary-btn">ホームへ戻る</button>

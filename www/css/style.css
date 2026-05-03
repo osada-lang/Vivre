@@ -203,6 +203,23 @@ button {
     margin-top: 8px;
 }
 .btn-desc { font-size: 12px; font-weight: 400; opacity: 0.7; }
+
+.annotation-text {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.5);
+    line-height: 1.6;
+    margin: 10px 0;
+}
+
+.gradient-text {
+    background: linear-gradient(to bottom, #ffffff 0%, #0A84FF 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 32px;
+    font-weight: bold;
+}
+
 button:active { transform: scale(0.97); opacity: 0.8; }
 
 .back-btn {

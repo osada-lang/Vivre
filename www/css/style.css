@@ -240,22 +240,19 @@ button {
 button:active { transform: scale(0.97); opacity: 0.8; }
 
 .back-btn {
-    position: absolute;
-    top: 20px;
-    left: 20px;
     background: transparent;
     color: var(--text-sub);
     font-size: 15px;
     padding: 10px;
 }
 
-.mode-select-card .card-content {
-    margin-top: 40px;
+.top-nav .back-btn {
+    position: relative;
+    padding-left: 0;
 }
 
-.mode-select-card .back-btn {
-    top: 15px;
-    left: 15px;
+.mode-select-card .card-content {
+    margin-top: 0;
 }
 
 /* Master Mode UI */

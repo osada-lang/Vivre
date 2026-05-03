@@ -254,7 +254,7 @@ button:active { transform: scale(0.97); opacity: 0.8; }
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 40px;
+    margin-bottom: 30px;
 }
 .room-badge {
     background: rgba(255,255,255,0.1);
@@ -337,6 +337,19 @@ button:active { transform: scale(0.97); opacity: 0.8; }
     animation: burn-card 1.5s forwards ease-in-out;
 }
 .status-info { text-align: center; }
+.bottom-tips {
+    margin-top: auto;
+    padding: 20px 0 10px;
+    text-align: center;
+}
+
+.bottom-tips p {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+    line-height: 1.6;
+    padding: 0 30px;
+}
+
 .status-info h3, .distance-display #distance-value { font-size: 64px; font-weight: 300; line-height: 1; }
 .status-info p, #connection-status { color: var(--text-sub); font-size: 16px; margin-top: 8px; }
 .distance-display #distance-unit { font-size: 20px; color: var(--text-sub); margin-left: 4px; }

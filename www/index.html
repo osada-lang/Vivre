@@ -38,7 +38,20 @@
             </div>
         </div>
 
-        <!-- 2. 参加入力画面 (子) -->
+        <!-- 2. モード選択画面 (発行前) -->
+        <div id="mode-select-screen" class="screen hidden">
+            <div class="glass-card">
+                <button class="back-btn" id="mode-select-back-btn">← 戻る</button>
+                <h2>発行モードを選択</h2>
+                <p class="subtitle">用途に合わせて選んでください</p>
+                <div class="menu-group">
+                    <button id="select-standard-btn" class="primary-btn">通常モード<br><span class="btn-desc">（多人数であなたの場所に集合）</span></button>
+                    <button id="select-bidirectional-btn" class="secondary-btn">双方向モード<br><span class="btn-desc">（1対1でお互いの場所を確認）</span></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 参加入力画面 (子) -->
         <div id="join-screen" class="screen hidden">
             <div class="glass-card">
                 <button class="back-btn" id="join-back-btn">← 戻る</button>
@@ -51,7 +64,7 @@
             </div>
         </div>
 
-        <!-- 3. マスター画面 (親) -->
+        <!-- 4. マスター画面 (親) -->
         <div id="master-screen" class="screen hidden">
             <div class="top-nav">
                 <div class="room-badge">ビブルカード: <span id="master-room-id">------</span></div>
@@ -59,14 +72,38 @@
             </div>
             
             <div class="main-display">
-                <div class="pulse-container">
-                    <div class="pulse-ring"></div>
-                    <div class="pulse-ring"></div>
-                    <div class="vivre-card-mini"></div>
+                <!-- 通常モード用 (ソナー) -->
+                <div id="master-standard-view">
+                    <div class="pulse-container">
+                        <div class="pulse-ring"></div>
+                        <div class="pulse-ring"></div>
+                        <div class="vivre-card-mini"></div>
+                    </div>
+                    <div class="status-info">
+                        <h3 id="follower-count">0</h3>
+                        <p>人があなたを追跡中</p>
+                    </div>
                 </div>
-                <div class="status-info">
-                    <h3 id="follower-count">0</h3>
-                    <p>人があなたを追跡中</p>
+
+                <!-- 双方向モード用 (矢印) -->
+                <div id="master-bidirectional-view" class="hidden">
+                    <div class="pulse-container">
+                        <div class="pulse-ring"></div>
+                        <div class="pulse-ring"></div>
+                        <div id="vivre-card-master">
+                            <div class="card-burn-effect"></div>
+                            <div class="card-inner">
+                                <div class="arrow"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="status-info">
+                        <div class="distance-display">
+                            <span id="distance-value-master">---</span>
+                            <span id="distance-unit-master">km</span>
+                        </div>
+                        <p id="connection-status-master">相手の位置を探しています...</p>
+                    </div>
                 </div>
                 
                 <div class="share-area" style="margin-top: 40px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px;">
@@ -80,7 +117,7 @@
             </div>
         </div>
 
-        <!-- 4. フォロワー画面 (子) -->
+        <!-- 5. フォロワー画面 (子) -->
         <div id="follower-screen" class="screen hidden">
             <div class="top-nav">
                 <div class="room-badge">追跡中: <span id="follower-room-id">------</span></div>
@@ -106,6 +143,19 @@
                     </div>
                     <p id="connection-status">相手の位置を探しています...</p>
                 </div>
+
+                <!-- 双方向モード用の共有・注意書きエリア (通常モード時は非表示) -->
+                <div id="follower-bidirectional-controls" class="hidden" style="width: 100%; margin-top: 30px;">
+                    <div class="share-area" style="width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                        <button id="share-code-btn-follower" class="primary-btn" style="width: 80%;">ビブルカードを共有</button>
+                        <p class="annotation-text" style="margin-top: 0; padding: 0 20px; text-align: center;">集合のため、このビブルカード（番号）を仲間に伝えてください。</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 双方向モード用の注意書き (通常モード時は非表示) -->
+            <div id="follower-bidirectional-tips" class="bottom-tips hidden">
+                <p>位置情報を停止するには「終了」してください。アプリを終了（キル）しても数分間、相手に位置が表示される場合があります。</p>
             </div>
 
             <!-- デバッグ情報表示用 (一時的) -->

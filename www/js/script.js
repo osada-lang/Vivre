@@ -18,6 +18,7 @@ const db = firebase.database();
 
 // State
 let myMode = null; // 'master' or 'follower'
+let roomType = 'standard'; // 'standard' or 'bidirectional'
 let currentRoomId = null;
 let myUserId = Math.random().toString(36).substring(7);
 let masterLocation = null;
@@ -165,6 +166,7 @@ function isNewerVersion(latest, current) {
 // UI Elements
 const screens = {
     home: document.getElementById('home-screen'),
+    modeSelect: document.getElementById('mode-select-screen'),
     join: document.getElementById('join-screen'),
     master: document.getElementById('master-screen'),
     follower: document.getElementById('follower-screen'),
@@ -172,10 +174,14 @@ const screens = {
     update: document.getElementById('update-overlay')
 };
 
-const connectionStatus = document.getElementById('connection-status');
 const distanceValueEl = document.getElementById('distance-value');
 const distanceUnitEl = document.getElementById('distance-unit');
+const distanceValueMasterEl = document.getElementById('distance-value-master');
+const distanceUnitMasterEl = document.getElementById('distance-unit-master');
+const connectionStatus = document.getElementById('connection-status');
+const connectionStatusMaster = document.getElementById('connection-status-master');
 const vivreCardEl = document.getElementById('vivre-card');
+const vivreCardMasterEl = document.getElementById('vivre-card-master');
 const debugInfoEl = document.getElementById('debug-info');
 
 // Update Buttons
@@ -207,18 +213,29 @@ function resetStateAndGoHome() {
     }
     if (currentRoomId) {
         db.ref(`rooms/${currentRoomId}`).off();
-        db.ref(`rooms/${currentRoomId}/followers/${myUserId}`).remove();
+        if (myMode === 'follower') {
+            db.ref(`rooms/${currentRoomId}/followers/${myUserId}`).remove();
+        }
     }
     
     // 変数のリセット
     myMode = null;
+    roomType = 'standard';
     currentRoomId = null;
     masterLocation = null;
     myLocation = { lat: null, lng: null };
+    signalAge = 0;
     
     // UIのリセット
     document.getElementById('vivre-card').classList.remove('burning');
+    document.getElementById('vivre-card-master').classList.remove('burning');
     if (debugInfoEl) debugInfoEl.textContent = '';
+    
+    // モード別表示のリセット
+    document.getElementById('master-standard-view').classList.remove('hidden');
+    document.getElementById('master-bidirectional-view').classList.add('hidden');
+    document.getElementById('follower-bidirectional-controls').classList.add('hidden');
+    document.getElementById('follower-bidirectional-tips').classList.add('hidden');
     
     // 入力フォームもクリア
     const input = document.getElementById('room-id-input');
@@ -239,18 +256,46 @@ const APP_SHARE_URL = 'https://osada-lang.github.io/Vivre/';
 // Capacitor Plugins
 // (既に上部で宣言済み: Share, BackgroundGeolocation, LocalNotifications)
 
-document.getElementById('mode-master-btn').addEventListener('click', async () => {
+document.getElementById('mode-master-btn').addEventListener('click', () => {
+    showScreen('modeSelect');
+});
+
+document.getElementById('mode-select-back-btn').addEventListener('click', () => {
+    showScreen('home');
+});
+
+document.getElementById('select-standard-btn').addEventListener('click', async () => {
+    roomType = 'standard';
+    await startNewSession();
+});
+
+document.getElementById('select-bidirectional-btn').addEventListener('click', async () => {
+    roomType = 'bidirectional';
+    await startNewSession();
+});
+
+async function startNewSession() {
     myMode = 'master';
     const roomId = Math.floor(100000 + Math.random() * 900000).toString();
     currentRoomId = roomId;
     document.getElementById('master-room-id').textContent = roomId;
     
     await startMasterSession(roomId);
+    
+    // モードに応じて表示を切り替え
+    if (roomType === 'bidirectional') {
+        document.getElementById('master-standard-view').classList.add('hidden');
+        document.getElementById('master-bidirectional-view').classList.remove('hidden');
+    } else {
+        document.getElementById('master-standard-view').classList.remove('hidden');
+        document.getElementById('master-bidirectional-view').classList.add('hidden');
+    }
+    
     showScreen('master');
-});
+}
 
 // ビブルカード（合言葉）共有
-document.getElementById('share-code-btn').addEventListener('click', async () => {
+const shareVivreCard = async () => {
     if (!currentRoomId) return;
     
     const Share = getCapPlugin('Share');
@@ -271,8 +316,6 @@ document.getElementById('share-code-btn').addEventListener('click', async () => 
             dialogTitle: 'ビブルカードを仲間に送る'
         });
     } catch (e) {
-        // ユーザーが共有をキャンセルした場合はエラーを投げることがあるため、それを無視
-        // ただし、環境的に共有がサポートされていない等の真のエラーの場合のみフォールバックを実行
         if (e.message !== 'Share canceled' && e.name !== 'AbortError') {
             console.log('Share failed', e);
             try {
@@ -281,7 +324,10 @@ document.getElementById('share-code-btn').addEventListener('click', async () => 
             } catch (err) { alert(shareText); }
         }
     }
-});
+};
+
+document.getElementById('share-code-btn').addEventListener('click', shareVivreCard);
+document.getElementById('share-code-btn-follower').addEventListener('click', shareVivreCard);
 
 // アプリ自体の共有 (ホーム画面)
 document.getElementById('share-app-btn').addEventListener('click', async () => {
@@ -325,6 +371,7 @@ async function startMasterSession(roomId) {
 
         // ★重要: update を使うことで、GPSデータが先に届いても消さないようにする
         roomRef.update({
+            type: roomType,
             createdAt: Date.now(),
             status: 'active'
         }).then(() => {
@@ -391,10 +438,22 @@ async function startMasterSession(roomId) {
             }
         }
 
-        // フォロワー数の監視
+        // フォロワーの監視 (双方向モード用)
         followersRef.on('value', snapshot => {
+            const followers = snapshot.val();
             const count = snapshot.numChildren();
             document.getElementById('follower-count').textContent = count;
+
+            if (roomType === 'bidirectional' && followers) {
+                // 最初のフォロワーを相手として認識
+                const firstFollowerId = Object.keys(followers)[0];
+                const followerData = followers[firstFollowerId];
+                if (followerData && typeof followerData === 'object') {
+                    masterLocation = followerData; // 便宜上 masterLocation に入れる
+                    masterLocation.lastHeartbeat = followerData.heartbeat || followerData.timestamp || getSyncedNow();
+                    updateDisplay();
+                }
+            }
         });
 
         // 切断時にルームを削除
@@ -462,6 +521,8 @@ async function startFollowerSession(roomId) {
             }
 
             const roomData = snapshot.val();
+            roomType = roomData.type || 'standard';
+
             if (roomData.master) {
                 masterLocation = roomData.master;
                 // ハートビート情報の保存
@@ -472,6 +533,17 @@ async function startFollowerSession(roomId) {
             } else {
                 connectionStatus.textContent = '相手のGPS信号を待っています...';
                 showScreen('follower');
+            }
+
+            // 双方向モード時のUI表示
+            if (roomType === 'bidirectional') {
+                document.getElementById('follower-bidirectional-controls').classList.remove('hidden');
+                document.getElementById('follower-bidirectional-tips').classList.remove('hidden');
+                // 自分の位置を送信開始
+                startSendingFollowerLocation(roomRef);
+            } else {
+                document.getElementById('follower-bidirectional-controls').classList.add('hidden');
+                document.getElementById('follower-bidirectional-tips').classList.add('hidden');
             }
         });
 
@@ -548,9 +620,44 @@ async function startFollowerSession(roomId) {
     }
 }
 
+function startSendingFollowerLocation(roomRef) {
+    if (watchId) return; // 既に開始済み
+
+    const myFollowerRef = roomRef.child('followers').child(myUserId);
+    const BackgroundGeolocation = getCapPlugin('BackgroundGeolocation');
+
+    if (BackgroundGeolocation) {
+        BackgroundGeolocation.addWatcher(
+            {
+                backgroundMessage: "双方向モードで位置を共有中...",
+                backgroundTitle: "Vivre Card 相互共有中",
+                requestPermissions: true,
+                stale: false,
+                distanceFilter: 2
+            },
+            function callback(location, error) {
+                if (error) return console.error(error);
+                if (location) {
+                    const data = { 
+                        lat: location.latitude, 
+                        lng: location.longitude, 
+                        timestamp: Date.now(),
+                        heartbeat: getSyncedNow()
+                    };
+                    myFollowerRef.update(data);
+                    myLocation = { lat: location.latitude, lng: location.longitude };
+                    updateDisplay();
+                }
+            }
+        ).then(id => { watchId = id; });
+    }
+}
+
 function triggerBurnEffect() {
     const card = document.getElementById('vivre-card');
+    const cardMaster = document.getElementById('vivre-card-master');
     card.classList.add('burning');
+    cardMaster.classList.add('burning');
     setTimeout(() => {
         showScreen('burn');
     }, 1500);
@@ -561,6 +668,7 @@ document.getElementById('burn-retry-btn').addEventListener('click', () => {
     masterLocation = null;
     currentRoomId = null;
     document.getElementById('vivre-card').classList.remove('burning');
+    document.getElementById('vivre-card-master').classList.remove('burning');
     showScreen('join');
 });
 
@@ -610,12 +718,17 @@ function handleOrientation(event) {
 
 function updateDisplay() {
     // 状況を細かくユーザーに伝える
+    const currentConnectionStatus = (myMode === 'master') ? connectionStatusMaster : connectionStatus;
+    const currentDistanceValue = (myMode === 'master') ? distanceValueMasterEl : distanceValueEl;
+    const currentDistanceUnit = (myMode === 'master') ? distanceUnitMasterEl : distanceUnitEl;
+    const currentVivreCard = (myMode === 'master') ? vivreCardMasterEl : vivreCardEl;
+
     if (!masterLocation) {
-        connectionStatus.textContent = '相手のGPS信号を待っています...';
+        if (currentConnectionStatus) currentConnectionStatus.textContent = '相手のGPS信号を待っています...';
         return;
     }
     if (!myLocation.lat) {
-        connectionStatus.textContent = '自分のGPS信号を探しています...';
+        if (currentConnectionStatus) currentConnectionStatus.textContent = '自分のGPS信号を探しています...';
         return;
     }
 
@@ -623,7 +736,7 @@ function updateDisplay() {
     const bearing = calculateBearing(myLocation.lat, myLocation.lng, masterLocation.lat, masterLocation.lng);
     const rotation = (bearing - myHeading + 360) % 360;
     
-    // デバッグ情報表示 (方位情報 + ハートビート信号の鮮度)
+    // デバッグ情報表示
     if (debugInfoEl) {
         const signalColor = signalAge > 5 ? '#ff4b2b' : '#00c6ff';
         const signalStatus = signalAge > 5 ? '(Lagging)' : '(Live)';
@@ -631,18 +744,20 @@ function updateDisplay() {
                                 `<span style="color: ${signalColor}">Signal Age: ${signalAge}s ${signalStatus}</span>`;
     }
 
-    vivreCardEl.style.transform = `rotate(${rotation}deg)`;
-    connectionStatus.textContent = '導かれています';
+    if (currentVivreCard) currentVivreCard.style.transform = `rotate(${rotation}deg)`;
+    if (currentConnectionStatus) currentConnectionStatus.textContent = '導かれています';
 
     // 距離
     const dist = calculateDistance(myLocation.lat, myLocation.lng, masterLocation.lat, masterLocation.lng);
     
-    if (dist < 1) {
-        distanceValueEl.textContent = Math.round(dist * 1000);
-        distanceUnitEl.textContent = 'm';
-    } else {
-        distanceValueEl.textContent = dist.toFixed(1);
-        distanceUnitEl.textContent = 'km';
+    if (currentDistanceValue && currentDistanceUnit) {
+        if (dist < 1) {
+            currentDistanceValue.textContent = Math.round(dist * 1000);
+            currentDistanceUnit.textContent = 'm';
+        } else {
+            currentDistanceValue.textContent = dist.toFixed(1);
+            currentDistanceUnit.textContent = 'km';
+        }
     }
 }
 

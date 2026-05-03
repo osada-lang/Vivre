@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Vivre Card</string>
-    <string name="title_activity_main">Vivre Card</string>
+    <string name="app_name">Vivre-Card</string>
+    <string name="title_activity_main">Vivre-Card</string>
     <string name="package_name">com.jirachi.vivre</string>
     <string name="custom_url_scheme">com.jirachi.vivre</string>
 </resources>

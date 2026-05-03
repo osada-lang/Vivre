@@ -253,7 +253,7 @@ document.getElementById('share-app-btn').addEventListener('click', async () => {
 
 // 使い方ボタン
 document.getElementById('how-to-use-btn').addEventListener('click', () => {
-    alert('【使い方】\n1. 集合したい人が「ビブルカードを発行」します。\n2. 発行された6桁のコードを仲間（複数人可）に共有します。\n3. 向かいたい人は「ビブルカードを受け取る」からコードを入力します。\n4. 矢印が指す方向へ進めば、仲間に辿り着けます。');
+    alert('【使い方】\n1. 仲間を集めたい人が「ビブルカードを発行」します。\n2. 発行された6桁のコードを仲間（複数人可）に共有します。\n3. 向かいたい人は「ビブルカードを受け取る」からコードを入力します。\n4. 矢印が指す方向へ進めば、仲間に辿り着けます。');
 });
 
 function startMasterSession(roomId) {

@@ -232,8 +232,10 @@ function resetStateAndGoHome() {
     if (debugInfoEl) debugInfoEl.textContent = '';
     
     // モード別表示のリセット
-    document.getElementById('master-standard-view').classList.remove('hidden');
-    document.getElementById('master-bidirectional-view').classList.add('hidden');
+    document.getElementById('master-standard-sonar').classList.remove('hidden');
+    document.getElementById('master-standard-status').classList.remove('hidden');
+    document.getElementById('master-bidirectional-status').classList.add('hidden');
+    document.getElementById('vivre-card-master').classList.add('hidden');
     document.getElementById('follower-bidirectional-controls').classList.add('hidden');
     document.getElementById('follower-bidirectional-tips').classList.add('hidden');
     
@@ -284,11 +286,15 @@ async function startNewSession() {
     
     // モードに応じて表示を切り替え
     if (roomType === 'bidirectional') {
-        document.getElementById('master-standard-view').classList.add('hidden');
-        document.getElementById('master-bidirectional-view').classList.remove('hidden');
+        document.getElementById('master-standard-sonar').classList.add('hidden');
+        document.getElementById('master-standard-status').classList.add('hidden');
+        document.getElementById('master-bidirectional-status').classList.remove('hidden');
+        document.getElementById('vivre-card-master').classList.remove('hidden');
     } else {
-        document.getElementById('master-standard-view').classList.remove('hidden');
-        document.getElementById('master-bidirectional-view').classList.add('hidden');
+        document.getElementById('master-standard-sonar').classList.remove('hidden');
+        document.getElementById('master-standard-status').classList.remove('hidden');
+        document.getElementById('master-bidirectional-status').classList.add('hidden');
+        document.getElementById('vivre-card-master').classList.add('hidden');
     }
     
     showScreen('master');

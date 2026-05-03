@@ -74,32 +74,29 @@
             </div>
             
             <div class="main-display">
-                <!-- 通常モード用 (ソナー) -->
-                <div id="master-standard-view">
-                    <div class="pulse-container">
-                        <div class="pulse-ring"></div>
-                        <div class="pulse-ring"></div>
-                        <div class="vivre-card-mini"></div>
-                    </div>
-                    <div class="status-info">
-                        <h3 id="follower-count">0</h3>
-                        <p>人があなたを追跡中</p>
+                <!-- 通常モードと双方向モードで共通のコンテナ構造を維持し、中の要素だけを切り替える -->
+                <div class="pulse-container">
+                    <div class="pulse-ring"></div>
+                    <div class="pulse-ring"></div>
+                    <!-- 通常モード用 -->
+                    <div id="master-standard-sonar" class="vivre-card-mini"></div>
+                    <!-- 双方向モード用 -->
+                    <div id="vivre-card-master" class="hidden">
+                        <div class="card-burn-effect"></div>
+                        <div class="card-inner">
+                            <div class="arrow"></div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- 双方向モード用 (矢印) -->
-                <div id="master-bidirectional-view" class="hidden">
-                    <div class="pulse-container">
-                        <div class="pulse-ring"></div>
-                        <div class="pulse-ring"></div>
-                        <div id="vivre-card-master">
-                            <div class="card-burn-effect"></div>
-                            <div class="card-inner">
-                                <div class="arrow"></div>
-                            </div>
-                        </div>
+                <div class="status-info">
+                    <!-- 通常モード用 -->
+                    <div id="master-standard-status">
+                        <h3 id="follower-count">0</h3>
+                        <p>人があなたを追跡中</p>
                     </div>
-                    <div class="status-info">
+                    <!-- 双方向モード用 -->
+                    <div id="master-bidirectional-status" class="hidden">
                         <div class="distance-display">
                             <span id="distance-value-master">---</span>
                             <span id="distance-unit-master">km</span>

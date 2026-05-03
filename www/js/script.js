@@ -23,9 +23,21 @@ let myUserId = Math.random().toString(36).substring(7);
 let masterLocation = null;
 let myLocation = { lat: null, lng: null };
 let myHeading = 0;
+let signalAge = 0;
 let watchId = null;
 let heartbeatInterval = null;
 let watchdogInterval = null;
+let serverTimeOffset = 0;
+
+// Firebase サーバー時刻とのオフセットを取得
+db.ref('.info/serverTimeOffset').on('value', snapshot => {
+    serverTimeOffset = snapshot.val() || 0;
+});
+
+// 現在の同期された時刻を取得するヘルパー
+function getSyncedNow() {
+    return Date.now() + serverTimeOffset;
+}
 
 // Capacitor Plugins
 // 実行時に安全に取得するためのヘルパー
@@ -329,7 +341,7 @@ async function startMasterSession(roomId) {
         if (heartbeatInterval) clearInterval(heartbeatInterval);
         heartbeatInterval = setInterval(() => {
             if (currentRoomId) {
-                masterPosRef.child('heartbeat').set(Date.now());
+                masterPosRef.child('heartbeat').set(getSyncedNow());
             }
         }, 5000);
 
@@ -354,8 +366,13 @@ async function startMasterSession(roomId) {
                             return console.error(error);
                         }
                         if (location) {
-                            const data = { lat: location.latitude, lng: location.longitude, timestamp: Date.now() };
-                            masterPosRef.set(data);
+                            const data = { 
+                                lat: location.latitude, 
+                                lng: location.longitude, 
+                                timestamp: Date.now()
+                                // heartbeat は setInterval のみに任せることで、アプリキルを正確に検知させる
+                            };
+                            masterPosRef.update(data); // set ではなく update にして heartbeat を消さないようにする
                         }
                     }
                 );
@@ -448,11 +465,8 @@ async function startFollowerSession(roomId) {
             if (roomData.master) {
                 masterLocation = roomData.master;
                 // ハートビート情報の保存
-                if (roomData.master.heartbeat) {
-                    masterLocation.lastHeartbeat = roomData.master.heartbeat;
-                } else {
-                    masterLocation.lastHeartbeat = roomData.master.timestamp || Date.now();
-                }
+                masterLocation.lastHeartbeat = roomData.master.heartbeat || roomData.master.timestamp || getSyncedNow();
+                
                 updateDisplay();
                 showScreen('follower');
             } else {
@@ -461,22 +475,26 @@ async function startFollowerSession(roomId) {
             }
         });
 
-        // 3. ウォッチドッグ (ハートビート監視: 2秒おきにチェック)
+        // 3. ウォッチドッグ (ハートビート監視: 1秒おきにチェック)
         if (watchdogInterval) clearInterval(watchdogInterval);
         watchdogInterval = setInterval(() => {
             if (myMode === 'follower' && masterLocation && masterLocation.lastHeartbeat) {
-                const now = Date.now();
+                const now = getSyncedNow();
                 const diff = now - masterLocation.lastHeartbeat;
+                signalAge = Math.max(0, Math.floor(diff / 1000));
                 
-                // 15秒以上更新がなければ「燃え尽き」と判定 (ネットワークの揺らぎを考慮して少し余裕を持つ)
-                if (diff > 15000) {
-                    console.log("Heartbeat lost. Diff:", diff);
+                // 表示更新
+                updateDisplay();
+
+                // 10秒以上更新がなければ「燃え尽き」と判定
+                if (diff > 10000) {
+                    console.log("Heartbeat lost (Synced). Diff:", diff);
                     clearInterval(watchdogInterval);
                     watchdogInterval = null;
                     triggerBurnEffect();
                 }
             }
-        }, 2000);
+        }, 1000);
 
         // 自分の位置取得 (バックグラウンド対応)
         myLocation = { lat: null, lng: null };
@@ -601,15 +619,16 @@ function updateDisplay() {
         return;
     }
 
-    // 方位の計算 (相手が北から何度の方向にいるか)
+    // 方位の計算
     const bearing = calculateBearing(myLocation.lat, myLocation.lng, masterLocation.lat, masterLocation.lng);
-    
-    // カードの回転角度 = 相手の方向 - 自分の向いている方向
     const rotation = (bearing - myHeading + 360) % 360;
     
-    // デバッグ情報表示
+    // デバッグ情報表示 (方位情報 + ハートビート信号の鮮度)
     if (debugInfoEl) {
-        debugInfoEl.textContent = `MyDir: ${Math.round(myHeading)}° | Target: ${Math.round(bearing)}° | Rot: ${Math.round(rotation)}°`;
+        const signalColor = signalAge > 5 ? '#ff4b2b' : '#00c6ff';
+        const signalStatus = signalAge > 5 ? '(Lagging)' : '(Live)';
+        debugInfoEl.innerHTML = `Dir: ${Math.round(myHeading)}° | Target: ${Math.round(bearing)}° | Rot: ${Math.round(rotation)}°<br>` +
+                                `<span style="color: ${signalColor}">Signal Age: ${signalAge}s ${signalStatus}</span>`;
     }
 
     vivreCardEl.style.transform = `rotate(${rotation}deg)`;

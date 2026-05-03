@@ -312,6 +312,8 @@ button:active { transform: scale(0.97); opacity: 0.8; }
 .vivre-card-mini {
     width: 60px;
     height: 60px;
+    position: absolute;
+    z-index: 2;
 }
 #vivre-card, #vivre-card-master {
     width: 60px;
@@ -319,11 +321,12 @@ button:active { transform: scale(0.97); opacity: 0.8; }
     background: linear-gradient(135deg, #00c6ff 0%, #0072ff 50%, #00c6ff 100%);
     background-size: 200% 200%;
     clip-path: polygon(50% 0%, 100% 100%, 50% 80%, 0% 100%);
-    margin: 40px auto;
     box-shadow: 0 0 30px rgba(0, 150, 255, 0.6);
     filter: drop-shadow(0 0 15px rgba(0, 150, 255, 0.8));
     transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     animation: arrow-glow 3s linear infinite;
+    position: absolute;
+    z-index: 2;
 }
 
 @keyframes arrow-glow {

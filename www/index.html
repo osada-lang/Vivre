@@ -57,8 +57,6 @@
                 <div class="room-badge">ビブルカード: <span id="master-room-id">------</span></div>
                 <button id="stop-master-btn" class="danger-btn">共有を終了</button>
             </div>
-            <!-- 注釈 -->
-            <p class="annotation-text" style="text-align: center; margin-top: -30px; margin-bottom: 20px;">※このビブルカード（番号）を仲間に伝えてください。<br>アプリを閉じると共有は終了します。</p>
             
             <div class="main-display">
                 <div class="pulse-container">
@@ -70,8 +68,11 @@
                     <h3 id="follower-count">0</h3>
                     <p>人があなたを追跡中</p>
                 </div>
-                <!-- 共有ボタン -->
-                <button id="share-code-btn" class="primary-btn" style="margin-top: 20px; width: 80%;">ビブルカードを共有</button>
+                
+                <div class="share-area" style="margin-top: 40px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 15px;">
+                    <p class="annotation-text">※このビブルカード（番号）を仲間に伝えてください。</p>
+                    <button id="share-code-btn" class="primary-btn" style="width: 80%;">ビブルカードを共有</button>
+                </div>
             </div>
             
             <div class="bottom-tips">

@@ -228,7 +228,7 @@ button {
 
 .burn-supplement {
     font-size: 14px;
-    color: #ffffff;
+    color: var(--text-sub);
     margin-top: 10px;
     opacity: 0.8;
 }

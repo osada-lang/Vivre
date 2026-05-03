@@ -300,12 +300,12 @@ async function startNewSession() {
     showScreen('master');
 }
 
-// ビブルカード（合言葉）共有
+// ビブルカード（番号）共有
 const shareVivreCard = async () => {
     if (!currentRoomId) return;
     
     const Share = getCapPlugin('Share');
-    const shareText = `わたしのビブルカード（合言葉）は【${currentRoomId}】です。\nアプリを開いて入力してね！\n\nアプリを持っていない方はこちら：\n${APP_SHARE_URL}`;
+    const shareText = `わたしのビブルカード（番号）は【${currentRoomId}】です。\nアプリを開いて入力してね！\n\nアプリを持っていない方はこちら：\n${APP_SHARE_URL}`;
     
     if (!Share) {
         try {
@@ -491,7 +491,7 @@ document.getElementById('join-back-btn').addEventListener('click', () => {
 
 document.getElementById('start-follow-btn').addEventListener('click', async () => {
     const roomId = document.getElementById('room-id-input').value.trim();
-    if (!roomId || roomId.length !== 6) return alert('6桁のビブルカード（合言葉）を入力してください');
+    if (!roomId || roomId.length !== 6) return alert('6桁のビブルカード（番号）を入力してください');
     
     await startFollowerSession(roomId);
 });

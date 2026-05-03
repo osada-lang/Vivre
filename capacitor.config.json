@@ -1,6 +1,6 @@
 {
   "appId": "com.jirachi.vivre",
-  "appName": "Vivre Card",
+  "appName": "Vivre-Card",
   "webDir": "www",
   "android": {
     "useLegacyBridge": true

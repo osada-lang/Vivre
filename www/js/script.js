@@ -291,7 +291,7 @@ function startMasterSession(roomId) {
 }
 
 document.getElementById('stop-master-btn').addEventListener('click', () => {
-    if (confirm('共有を終了しますか？参加者全員のカードが燃え尽きます。')) {
+    if (confirm('共有を終了しますか？燃え尽きて位置が特定されなくなります')) {
         db.ref(`rooms/${currentRoomId}`).remove();
         resetStateAndGoHome();
     }

@@ -3,22 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vivre - Information</title>
+    <title>Vivre Card - 導きのカード</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f8f9fa; }
-        .card { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center; }
-        h1 { color: #007aff; margin-bottom: 30px; }
-        .links { display: flex; flex-direction: column; gap: 15px; }
-        a { text-decoration: none; color: white; background: #007aff; padding: 12px 30px; border-radius: 8px; font-weight: bold; transition: background 0.2s; }
-        a:hover { background: #0056b3; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+            background: #1a1a1c; 
+            color: white;
+        }
+        .card { 
+            background: rgba(255, 255, 255, 0.08); 
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 40px 24px; 
+            border-radius: 28px; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3); 
+            text-align: center; 
+            max-width: 400px;
+            width: 90%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        h1 { color: white; margin-bottom: 10px; font-size: 32px; }
+        p.tagline { color: #8E8E93; margin-bottom: 30px; font-size: 16px; }
+        .links { display: flex; flex-direction: column; gap: 16px; }
+        .btn { 
+            text-decoration: none; 
+            color: white; 
+            background: #0A84FF; 
+            padding: 18px 20px; 
+            border-radius: 16px; 
+            font-weight: bold; 
+            transition: all 0.2s; 
+            display: block;
+            font-size: 17px;
+        }
+        .btn:active { transform: scale(0.98); opacity: 0.9; }
+        .btn.secondary { background: rgba(255, 255, 255, 0.1); }
+        .btn.disabled { background: rgba(255, 255, 255, 0.05); color: #444; pointer-events: none; }
+        .footer-links { margin-top: 40px; display: flex; justify-content: center; gap: 20px; }
+        .footer-links a { color: #8E8E93; font-size: 13px; text-decoration: none; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h1>Vivre App</h1>
+        <h1>Vivre Card</h1>
+        <p class="tagline">大切な人へ、方位で導く</p>
+        
         <div class="links">
-            <a href="privacy.html">Privacy Policy / プライバシーポリシー</a>
-            <a href="support.html">Support Page / サポートページ</a>
+            <!-- 公開後にURLを書き換えてください -->
+            <a href="#" class="btn disabled">App Store でダウンロード<br><span style="font-size: 11px; font-weight: normal;">(準備中)</span></a>
+            <a href="#" class="btn disabled">Google Play で手に入れよう<br><span style="font-size: 11px; font-weight: normal;">(準備中)</span></a>
+        </div>
+
+        <div class="footer-links">
+            <a href="privacy.html">プライバシーポリシー</a>
+            <a href="support.html">サポート</a>
         </div>
     </div>
 </body>

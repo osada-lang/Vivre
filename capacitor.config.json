@@ -1,6 +1,6 @@
 {
   "appId": "com.jirachi.vivre",
-  "appName": "Vivre",
+  "appName": "Vivre Card",
   "webDir": "www",
   "plugins": {
     "SplashScreen": {

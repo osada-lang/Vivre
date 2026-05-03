@@ -175,6 +175,10 @@ function resetStateAndGoHome() {
     document.getElementById('vivre-card').classList.remove('burning');
     if (debugInfoEl) debugInfoEl.textContent = '';
     
+    // 入力フォームもクリア
+    const input = document.getElementById('room-id-input');
+    if (input) input.value = '';
+
     showScreen('home');
 }
 
@@ -185,6 +189,8 @@ function showScreen(name) {
 }
 
 // --- Master Mode ---
+const APP_SHARE_URL = 'https://osada-lang.github.io/Vivre/';
+
 document.getElementById('mode-master-btn').addEventListener('click', () => {
     myMode = 'master';
     const roomId = Math.floor(100000 + Math.random() * 900000).toString();
@@ -193,6 +199,52 @@ document.getElementById('mode-master-btn').addEventListener('click', () => {
     
     startMasterSession(roomId);
     showScreen('master');
+});
+
+// ビブルカード（合言葉）共有
+document.getElementById('share-code-btn').addEventListener('click', async () => {
+    if (!currentRoomId) return;
+    
+    const shareText = `わたしのビブルカード（合言葉）は【${currentRoomId}】です。\nアプリを開いて入力してね！\n\nアプリを持っていない方はこちら：\n${APP_SHARE_URL}`;
+    
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: 'Vivre Card 共有',
+                text: shareText
+            });
+        } catch (e) { console.log('Share failed', e); }
+    } else {
+        // フォールバック: クリップボードコピー
+        try {
+            await navigator.clipboard.writeText(shareText);
+            alert('ビブルカードをコピーしました。LINE等に貼り付けて送ってください！');
+        } catch (e) { alert(shareText); }
+    }
+});
+
+// アプリ自体の共有 (ホーム画面)
+document.getElementById('share-app-btn').addEventListener('click', async () => {
+    const shareText = `大切な人へ、方位で導くアプリ「Vivre Card」\nこちらからインストールできます：\n${APP_SHARE_URL}`;
+    
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: 'Vivre Card アプリ共有',
+                text: shareText
+            });
+        } catch (e) { console.log('Share failed', e); }
+    } else {
+        try {
+            await navigator.clipboard.writeText(shareText);
+            alert('アプリ紹介URLをコピーしました。仲間に送ってあげてください！');
+        } catch (e) { window.open(APP_SHARE_URL, '_system'); }
+    }
+});
+
+// 使い方ボタン
+document.getElementById('how-to-use-btn').addEventListener('click', () => {
+    alert('【使い方】\n1. 集合したい人が「ビブルカードを発行」します。\n2. 発行された6桁のコードを仲間に共有します。\n3. 向かいたい人は「ビブルカードを受け取る」からコードを入力します。\n4. 矢印が指す方向へ進めば、仲間に辿り着けます。');
 });
 
 function startMasterSession(roomId) {
@@ -247,7 +299,7 @@ document.getElementById('join-back-btn').addEventListener('click', () => {
 
 document.getElementById('start-follow-btn').addEventListener('click', () => {
     const roomId = document.getElementById('room-id-input').value.trim();
-    if (!roomId || roomId.length !== 6) return alert('6桁の合言葉を入力してください');
+    if (!roomId || roomId.length !== 6) return alert('6桁のビブルカード（合言葉）を入力してください');
     
     myMode = 'follower';
     currentRoomId = roomId;
@@ -264,7 +316,7 @@ async function startFollowerSession(roomId) {
     try {
         const initialSnapshot = await roomRef.once('value');
         if (!initialSnapshot.exists()) {
-            alert("存在しない合言葉です。もう一度確認してください。");
+            alert("存在しないビブルカードです。もう一度確認してください。");
             return; // ここで終了し、入力画面に留まる
         }
     } catch (error) {

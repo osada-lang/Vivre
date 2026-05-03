@@ -71,13 +71,14 @@ body {
 
 #home-visual {
     width: 100%;
-    max-width: 240px;
+    max-width: 280px;
     height: auto;
-    margin-bottom: 20px;
+    margin-bottom: 30px;
     filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3));
     position: relative;
     z-index: 2;
     animation: home-pulse 4s ease-in-out infinite;
+    border-radius: 16px;
 }
 
 @keyframes home-pulse {
@@ -151,9 +152,14 @@ body {
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 28px;
-    padding: 40px 24px;
+    padding: 32px 24px;
     text-align: center;
     box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+}
+
+.home-card {
+    padding-top: 50px;
+    padding-bottom: 24px;
 }
 
 h1 { font-size: 40px; font-weight: 600; letter-spacing: -1px; margin-bottom: 4px; }
@@ -182,7 +188,20 @@ button {
 }
 .primary-btn { background: var(--accent-color); color: white; }
 .secondary-btn { background: rgba(255,255,255,0.1); color: white; }
+.ghost-btn { 
+    background: transparent; 
+    color: var(--text-sub); 
+    font-size: 14px; 
+    padding: 12px;
+    font-weight: 400;
+}
 .danger-btn { background: rgba(255, 69, 58, 0.15); color: var(--danger-color); }
+
+.sub-menu-group {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 8px;
+}
 .btn-desc { font-size: 12px; font-weight: 400; opacity: 0.7; }
 button:active { transform: scale(0.97); opacity: 0.8; }
 

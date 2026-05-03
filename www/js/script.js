@@ -213,7 +213,7 @@ function resetStateAndGoHome() {
     }
     if (currentRoomId) {
         db.ref(`rooms/${currentRoomId}`).off();
-        if (myMode === 'follower') {
+        if (myMode === 'follower' || roomType === 'bidirectional') {
             db.ref(`rooms/${currentRoomId}/followers/${myUserId}`).remove();
         }
     }
@@ -438,20 +438,23 @@ async function startMasterSession(roomId) {
             }
         }
 
-        // フォロワーの監視 (双方向モード用)
+        // フォロワーの監視
         followersRef.on('value', snapshot => {
             const followers = snapshot.val();
             const count = snapshot.numChildren();
             document.getElementById('follower-count').textContent = count;
 
+            // 双方向モード時のみ、お互いの位置を同期
             if (roomType === 'bidirectional' && followers) {
-                // 最初のフォロワーを相手として認識
-                const firstFollowerId = Object.keys(followers)[0];
-                const followerData = followers[firstFollowerId];
-                if (followerData && typeof followerData === 'object') {
-                    masterLocation = followerData; // 便宜上 masterLocation に入れる
-                    masterLocation.lastHeartbeat = followerData.heartbeat || followerData.timestamp || getSyncedNow();
-                    updateDisplay();
+                // 自分以外の最初のフォロワーを相手として認識
+                const otherFollowerId = Object.keys(followers).find(id => id !== myUserId);
+                if (otherFollowerId) {
+                    const followerData = followers[otherFollowerId];
+                    if (followerData && typeof followerData === 'object') {
+                        masterLocation = followerData;
+                        masterLocation.lastHeartbeat = followerData.heartbeat || followerData.timestamp || getSyncedNow();
+                        updateDisplay();
+                    }
                 }
             }
         });
@@ -535,15 +538,21 @@ async function startFollowerSession(roomId) {
                 showScreen('follower');
             }
 
-            // 双方向モード時のUI表示
+            // 双方向モード時の追加処理
             if (roomType === 'bidirectional') {
                 document.getElementById('follower-bidirectional-controls').classList.remove('hidden');
                 document.getElementById('follower-bidirectional-tips').classList.remove('hidden');
-                // 自分の位置を送信開始
                 startSendingFollowerLocation(roomRef);
             } else {
+                // 通常モード時は確実に非表示にする
                 document.getElementById('follower-bidirectional-controls').classList.add('hidden');
                 document.getElementById('follower-bidirectional-tips').classList.add('hidden');
+                // 位置情報送信も停止
+                if (watchId && myMode === 'follower') {
+                    const BackgroundGeolocation = getCapPlugin('BackgroundGeolocation');
+                    if (BackgroundGeolocation) BackgroundGeolocation.removeWatcher({ id: watchId });
+                    watchId = null;
+                }
             }
         });
 
@@ -717,6 +726,12 @@ function handleOrientation(event) {
 }
 
 function updateDisplay() {
+    // 通常モードかつマスターの場合は、方位計算をスキップしてソナー表示のみ維持
+    if (myMode === 'master' && roomType === 'standard') {
+        document.getElementById('follower-count').textContent = document.getElementById('follower-count').textContent;
+        return;
+    }
+
     // 状況を細かくユーザーに伝える
     const currentConnectionStatus = (myMode === 'master') ? connectionStatusMaster : connectionStatus;
     const currentDistanceValue = (myMode === 'master') ? distanceValueMasterEl : distanceValueEl;

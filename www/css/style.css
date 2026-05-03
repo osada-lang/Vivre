@@ -249,6 +249,15 @@ button:active { transform: scale(0.97); opacity: 0.8; }
     padding: 10px;
 }
 
+.mode-select-card .card-content {
+    margin-top: 40px;
+}
+
+.mode-select-card .back-btn {
+    top: 15px;
+    left: 15px;
+}
+
 /* Master Mode UI */
 .top-nav {
     display: flex;

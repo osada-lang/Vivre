@@ -2,6 +2,9 @@
   "appId": "com.jirachi.vivre",
   "appName": "Vivre Card",
   "webDir": "www",
+  "android": {
+    "useLegacyBridge": true
+  },
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 0,

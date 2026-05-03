@@ -25,6 +25,9 @@ let myLocation = { lat: null, lng: null };
 let myHeading = 0;
 let watchId = null;
 
+// Capacitor Plugins
+const { Share, BackgroundGeolocation, LocalNotifications } = Capacitor.Plugins;
+
 // --- Version Management ---
 const APP_VERSION = '1.0.1'; // 現在のアプリバージョン
 let latestVersion = '1.0.1';
@@ -76,6 +79,15 @@ async function showBrandSplash() {
 window.addEventListener('load', async () => {
     // 背景で Remote Config の取得を開始
     const configPromise = initRemoteConfig();
+    
+    // 通知権限の要求 (Android 13+ でバックグラウンド通知を表示するために必要)
+    if (Capacitor.getPlatform() === 'android') {
+        try {
+            await LocalNotifications.requestPermissions();
+        } catch (e) {
+            console.warn("Notification permission request failed", e);
+        }
+    }
     
     // スプラッシュ演出（タップ待ち含む）を実行
     await showBrandSplash();
@@ -157,7 +169,7 @@ document.getElementById('update-now-btn').addEventListener('click', () => {
 function resetStateAndGoHome() {
     // セッション情報のクリア
     if (watchId) {
-        navigator.geolocation.clearWatch(watchId);
+        BackgroundGeolocation.removeWatcher({ id: watchId });
         watchId = null;
     }
     if (currentRoomId) {
@@ -192,7 +204,7 @@ function showScreen(name) {
 const APP_SHARE_URL = 'https://osada-lang.github.io/Vivre/';
 
 // Capacitor Plugins
-const { Share } = Capacitor.Plugins;
+// (既に上部で宣言済み: Share, BackgroundGeolocation, LocalNotifications)
 
 document.getElementById('mode-master-btn').addEventListener('click', () => {
     myMode = 'master';
@@ -272,13 +284,32 @@ function startMasterSession(roomId) {
         console.error("Firebase update error:", err);
     });
 
-    // 自分の位置情報を定期的に更新
-    if ("geolocation" in navigator) {
-        watchId = navigator.geolocation.watchPosition(pos => {
-            const data = { lat: pos.coords.latitude, lng: pos.coords.longitude, timestamp: Date.now() };
-            masterPosRef.set(data);
-        }, err => console.error(err), { enableHighAccuracy: true });
-    }
+    // 自分の位置情報を定期的に更新 (バックグラウンド対応)
+    BackgroundGeolocation.addWatcher(
+        {
+            backgroundMessage: "ビブルカードを共有中... 画面を閉じても共有は続きます。",
+            backgroundTitle: "Vivre Card 位置共有中",
+            requestPermissions: true,
+            stale: false,
+            distanceFilter: 2 // 2メートル移動ごとに更新
+        },
+        function callback(location, error) {
+            if (error) {
+                if (error.code === "NOT_AUTHORIZED") {
+                    if (confirm("位置情報の権限が必要です。設定を開きますか？")) {
+                        BackgroundGeolocation.openSettings();
+                    }
+                }
+                return console.error(error);
+            }
+            if (location) {
+                const data = { lat: location.latitude, lng: location.longitude, timestamp: Date.now() };
+                masterPosRef.set(data);
+            }
+        }
+    ).then(id => {
+        watchId = id;
+    });
 
     // フォロワー数の監視
     followersRef.on('value', snapshot => {
@@ -372,20 +403,33 @@ async function startFollowerSession(roomId) {
         }
     });
 
-    // 自分の位置取得 (計算用のみ。サーバーには送らない)
+    // 自分の位置取得 (計算用のみ。サーバーには送らない。バックグラウンド対応)
     // 役割交代時に古い位置情報を引き継がないよう初期化
     myLocation = { lat: null, lng: null };
-    if ("geolocation" in navigator) {
-        // watchId を保存して、役割交代時にクリアできるようにする
-        if (watchId) navigator.geolocation.clearWatch(watchId);
-        watchId = navigator.geolocation.watchPosition(pos => {
-            myLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-            updateDisplay();
-        }, err => {
-            console.error("My GPS Error:", err);
-            connectionStatus.textContent = '自分のGPS信号を探しています...設定を確認してください';
-        }, { enableHighAccuracy: true });
+
+    if (watchId) {
+        BackgroundGeolocation.removeWatcher({ id: watchId });
+        watchId = null;
     }
+
+    BackgroundGeolocation.addWatcher(
+        {
+            backgroundMessage: "ビブルカードを使用中... 画面を閉じても目的地を指し示し続けます。",
+            backgroundTitle: "Vivre Card 稼働中",
+            requestPermissions: true,
+            stale: false,
+            distanceFilter: 2
+        },
+        function callback(location, error) {
+            if (error) return console.error(error);
+            if (location) {
+                myLocation = { lat: location.latitude, lng: location.longitude };
+                updateDisplay();
+            }
+        }
+    ).then(id => {
+        watchId = id;
+    });
 
     // コンパス
     startOrientationTracking();

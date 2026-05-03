@@ -4,4 +4,5 @@
     <string name="title_activity_main">Vivre Card</string>
     <string name="package_name">com.jirachi.vivre</string>
     <string name="custom_url_scheme">com.jirachi.vivre</string>
+    <string name="capacitor_background_geolocation_notification_channel_name">Vivre Card 位置共有</string>
 </resources>

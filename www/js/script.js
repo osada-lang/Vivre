@@ -51,6 +51,23 @@ function getCapPlugin(name) {
     return null;
 }
 
+let lastResumeTime = Date.now();
+
+// アプリのフォアグラウンド復帰イベント (バックグラウンド復帰時の表示フリーズ対策)
+const App = getCapPlugin('App');
+if (App) {
+    App.addListener('appStateChange', ({ isActive }) => {
+        if (isActive) {
+            console.log("App became active, refreshing UI...");
+            lastResumeTime = Date.now();
+            // 復帰直後はFirebaseの同期待ちなどのため、少し待ってから表示更新
+            setTimeout(() => {
+                updateDisplay();
+            }, 1000);
+        }
+    });
+}
+
 // カスタム確認ダイアログ (native confirm の Ok/OK 揺れ対策)
 function showConfirm(message) {
     return new Promise((resolve) => {
@@ -343,6 +360,8 @@ function showScreen(name) {
 }
 
 // --- Master Mode ---
+const IOS_STORE_URL = 'https://apps.apple.com/app/id6741757805'; // 公開後に正しいURLへ書き換え
+const ANDROID_STORE_URL = 'https://play.google.com/store/apps/details?id=com.jirachi.vivre'; // 公開後に正しいURLへ書き換え
 const APP_SHARE_URL = 'https://osada-lang.github.io/Vivre/';
 
 // Capacitor Plugins
@@ -399,7 +418,7 @@ const shareVivreCard = async () => {
     if (!currentRoomId) return;
     
     const Share = getCapPlugin('Share');
-    const shareText = `わたしのビブルカード（番号）は【${currentRoomId}】です。\nアプリを開いて入力してね！\n\nアプリを持っていない方はこちら：\n${APP_SHARE_URL}`;
+    const shareText = `わたしのビブルカード（番号）は【${currentRoomId}】です。\nアプリを開いて入力してね！\n\nアプリを持っていない方はこちら：\niOS: ${IOS_STORE_URL}\nAndroid: ${ANDROID_STORE_URL}`;
     
     if (!Share) {
         try {
@@ -431,10 +450,15 @@ document.getElementById('share-code-btn').addEventListener('click', shareVivreCa
 // アプリ自体の共有 (ホーム画面)
 document.getElementById('share-app-btn').addEventListener('click', async () => {
     const Share = getCapPlugin('Share');
-    const shareText = `大切な人へ、方位で導くアプリ「Vivre Card」\nこちらからインストールできます：\n${APP_SHARE_URL}`;
+    const shareText = `大切な人へ、方位で導くアプリ「Vivre Card」\nこちらからインストールできます：\niOS: ${IOS_STORE_URL}\nAndroid: ${ANDROID_STORE_URL}`;
     
     if (!Share) {
-        window.open(APP_SHARE_URL, '_system');
+        try {
+            await navigator.clipboard.writeText(shareText);
+            alert('アプリ紹介テキストをコピーしました。仲間に送ってあげてください！');
+        } catch (err) {
+            window.open(APP_SHARE_URL, '_system');
+        }
         return;
     }
 
@@ -576,6 +600,14 @@ async function startMasterSession(roomId) {
             }
         });
 
+        // ウォッチドッグ (秒数表示の更新用: 1秒おきにチェック)
+        if (watchdogInterval) clearInterval(watchdogInterval);
+        watchdogInterval = setInterval(() => {
+            if (myMode === 'master' && roomType === 'bidirectional' && masterLocation) {
+                updateDisplay();
+            }
+        }, 1000);
+
         // 切断時にルームを削除
         roomRef.onDisconnect().remove();
     } catch (globalError) {
@@ -660,24 +692,12 @@ async function startFollowerSession(roomId) {
             }
         });
 
-        // 3. ウォッチドッグ (ハートビート監視: 1秒おきにチェック)
+        // 3. ウォッチドッグ (秒数表示の更新用: 1秒おきにチェック)
         if (watchdogInterval) clearInterval(watchdogInterval);
         watchdogInterval = setInterval(() => {
-            if (myMode === 'follower' && masterLocation && masterLocation.lastHeartbeat) {
-                const now = getSyncedNow();
-                const diff = now - masterLocation.lastHeartbeat;
-                signalAge = Math.max(0, Math.floor(diff / 1000));
-                
-                // 表示更新
+            if (myMode === 'follower' && masterLocation) {
+                // updateDisplay 内で signalAge の計算と表示更新を行う
                 updateDisplay();
-
-                // 60秒以上更新がなければ「燃え尽き」と判定 (iOSのサボりを考慮)
-                if (diff > 60000) {
-                    console.log("Heartbeat lost (Synced). Diff:", diff);
-                    clearInterval(watchdogInterval);
-                    watchdogInterval = null;
-                    triggerBurnEffect();
-                }
             }
         }, 1000);
 
@@ -748,6 +768,15 @@ async function startFollowerSession(roomId) {
 }
 
 function triggerBurnEffect() {
+    // 監視停止
+    if (currentRoomId) {
+        db.ref(`rooms/${currentRoomId}`).off();
+    }
+    if (watchdogInterval) {
+        clearInterval(watchdogInterval);
+        watchdogInterval = null;
+    }
+
     const card = document.getElementById('vivre-card');
     const cardMaster = document.getElementById('vivre-card-master');
     card.classList.add('burning');
@@ -830,6 +859,23 @@ function updateDisplay() {
         if (currentConnectionStatus) currentConnectionStatus.textContent = '相手のGPS信号を待っています...';
         return;
     }
+
+    // Signal Age をここで計算 (タイマー停止対策)
+    if (masterLocation.lastHeartbeat) {
+        const now = getSyncedNow();
+        const diff = now - masterLocation.lastHeartbeat;
+        signalAge = Math.max(0, Math.floor(diff / 1000));
+
+        // 60秒以上更新がなければ「燃え尽き」と判定
+        // ただし、バックグラウンド復帰直後の同期ラグ（5秒間）は判定をスキップする
+        const timeSinceResume = Date.now() - lastResumeTime;
+        if (diff > 60000 && timeSinceResume > 5000 && !screens.follower.classList.contains('hidden')) {
+            console.log("Heartbeat lost detected in updateDisplay. Diff:", diff, "TimeSinceResume:", timeSinceResume);
+            triggerBurnEffect();
+            return;
+        }
+    }
+
     if (myLocation.lat === null) {
         if (currentConnectionStatus) currentConnectionStatus.textContent = '自分のGPS信号を探しています...';
         return;

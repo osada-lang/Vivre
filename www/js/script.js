@@ -29,6 +29,7 @@ let watchId = null;
 let heartbeatInterval = null;
 let watchdogInterval = null;
 let serverTimeOffset = 0;
+let isTrackingOrientation = false;
 
 // Firebase サーバー時刻とのオフセットを取得
 db.ref('.info/serverTimeOffset').on('value', snapshot => {
@@ -48,6 +49,96 @@ function getCapPlugin(name) {
     }
     console.warn(`Capacitor Plugin "${name}" not found.`);
     return null;
+}
+
+// カスタム確認ダイアログ (native confirm の Ok/OK 揺れ対策)
+function showConfirm(message) {
+    return new Promise((resolve) => {
+        const overlay = document.getElementById('confirm-overlay');
+        const messageEl = document.getElementById('confirm-message');
+        const okBtn = document.getElementById('confirm-ok-btn');
+        const cancelBtn = document.getElementById('confirm-cancel-btn');
+
+        messageEl.innerText = message;
+        overlay.classList.remove('hidden');
+
+        const onOk = () => {
+            cleanup();
+            resolve(true);
+        };
+
+        const onCancel = () => {
+            cleanup();
+            resolve(false);
+        };
+
+        const cleanup = () => {
+            okBtn.removeEventListener('click', onOk);
+            cancelBtn.removeEventListener('click', onCancel);
+            overlay.classList.add('hidden');
+        };
+
+        okBtn.addEventListener('click', onOk, { once: true });
+        cancelBtn.addEventListener('click', onCancel, { once: true });
+    });
+}
+
+/**
+ * OSごとの権限チェックと誘導
+ * @returns {Promise<boolean>} 続行可能ならtrue
+ */
+async function checkPlatformPermissions() {
+    try {
+        if (typeof Capacitor === 'undefined') return true;
+        const platform = Capacitor.getPlatform();
+
+        // iOS: 「常に許可」への誘導
+        if (platform === 'ios') {
+            const BackgroundGeolocation = getCapPlugin('BackgroundGeolocation');
+            if (BackgroundGeolocation) {
+                // iOSで「常に許可」かどうかを完全に判別するのは難しいため、
+                // 定期的に案内を出すか、シンプルに「位置情報の設定」を確認する
+                const status = await BackgroundGeolocation.checkPermissions();
+                if (status.location !== 'granted') {
+                    // まだ許可されていない場合は、通常のフローに任せる（addWatcherで要求される）
+                    return true;
+                }
+                
+                // すでに「使用中のみ」で許可されている場合、バックグラウンド動作のために
+                // 「常に」への変更を1回だけ促す
+                const hasShownGuidance = localStorage.getItem('ios_always_guidance_shown');
+                if (!hasShownGuidance) {
+                    const confirmed = await showConfirm(
+                        "【iOSをご利用の方へ】\nバックグラウンドで共有を続けるには、位置情報の権限を「常に」に設定することを推奨します。\n\n「設定」を開いて変更しますか？\n（後でも変更可能です）"
+                    );
+                    localStorage.setItem('ios_always_guidance_shown', 'true');
+                    if (confirmed) {
+                        await BackgroundGeolocation.openSettings();
+                        return false; 
+                    }
+                }
+            }
+        }
+
+        // Android: 通知許可の理由説明
+        if (platform === 'android') {
+            const LocalNotifications = getCapPlugin('LocalNotifications');
+            if (LocalNotifications) {
+                const status = await LocalNotifications.checkPermissions();
+                if (status.display !== 'granted') {
+                    alert("【重要：通知の許可】\nバックグラウンドで位置共有を続けるために通知の許可が必要です。\n\n※許可しない場合、画面を閉じると共有が停止してしまいます。次の画面で「許可」を選択してください。");
+                    const req = await LocalNotifications.requestPermissions();
+                    if (req.display !== 'granted') {
+                        alert("通知が許可されませんでした。バックグラウンドで動作が停止する可能性があります。");
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Permission check failed:", e);
+    }
+
+    return true;
 }
 
 // --- Version Management ---
@@ -237,8 +328,6 @@ function resetStateAndGoHome() {
     document.getElementById('master-standard-status').classList.remove('hidden');
     document.getElementById('master-bidirectional-status').classList.add('hidden');
     document.getElementById('vivre-card-master').classList.add('hidden');
-    document.getElementById('follower-bidirectional-controls').classList.add('hidden');
-    document.getElementById('follower-bidirectional-tips').classList.add('hidden');
     
     // 入力フォームもクリア
     const input = document.getElementById('room-id-input');
@@ -278,6 +367,10 @@ document.getElementById('select-bidirectional-btn').addEventListener('click', as
 });
 
 async function startNewSession() {
+    // 権限チェック
+    const canProceed = await checkPlatformPermissions();
+    if (!canProceed) return;
+
     myMode = 'master';
     const roomId = Math.floor(100000 + Math.random() * 900000).toString();
     currentRoomId = roomId;
@@ -334,7 +427,6 @@ const shareVivreCard = async () => {
 };
 
 document.getElementById('share-code-btn').addEventListener('click', shareVivreCard);
-document.getElementById('share-code-btn-follower').addEventListener('click', shareVivreCard);
 
 // アプリ自体の共有 (ホーム画面)
 document.getElementById('share-app-btn').addEventListener('click', async () => {
@@ -376,6 +468,12 @@ document.getElementById('help-back-btn').addEventListener('click', () => {
 async function startMasterSession(roomId) {
     try {
         console.log("Starting master session for room:", roomId);
+
+        // 双方向モードならコンパスを開始
+        if (roomType === 'bidirectional') {
+            startOrientationTracking();
+        }
+
         const roomRef = db.ref(`rooms/${roomId}`);
         const masterPosRef = roomRef.child('master');
         const followersRef = roomRef.child('followers');
@@ -412,12 +510,13 @@ async function startMasterSession(roomId) {
                         backgroundTitle: "Vivre Card 位置共有中",
                         requestPermissions: true,
                         stale: false,
-                        distanceFilter: 2 // 2メートル移動ごとに更新
+                        distanceFilter: 0, // 感度最大 (静止時もデータを送る確率を上げる)
+                        showsBackgroundLocationIndicator: true // iOSバックグラウンド動作を安定化
                     },
-                    function callback(location, error) {
+                    async function callback(location, error) {
                         if (error) {
                             if (error.code === "NOT_AUTHORIZED") {
-                                if (confirm("位置情報の権限が必要です。設定を開きますか？")) {
+                                if (await showConfirm("位置情報の権限が必要です。設定を開きますか？")) {
                                     BackgroundGeolocation.openSettings();
                                 }
                             }
@@ -427,10 +526,16 @@ async function startMasterSession(roomId) {
                             const data = { 
                                 lat: location.latitude, 
                                 lng: location.longitude, 
-                                timestamp: Date.now()
-                                // heartbeat は setInterval のみに任せることで、アプリキルを正確に検知させる
+                                timestamp: Date.now(),
+                                heartbeat: getSyncedNow() // バックグラウンドGPS時も生存信号を送る
                             };
-                            masterPosRef.update(data); // set ではなく update にして heartbeat を消さないようにする
+                            masterPosRef.update(data);
+
+                            // 双方向モードなら自分の位置もローカルに保存して表示を更新
+                            if (roomType === 'bidirectional') {
+                                myLocation = { lat: location.latitude, lng: location.longitude };
+                                updateDisplay();
+                            }
                         }
                     }
                 );
@@ -463,7 +568,8 @@ async function startMasterSession(roomId) {
                     const followerData = followers[otherFollowerId];
                     if (followerData && typeof followerData === 'object') {
                         masterLocation = followerData;
-                        masterLocation.lastHeartbeat = followerData.heartbeat || followerData.timestamp || getSyncedNow();
+                        // heartbeat と timestamp のうち、より新しい方を生存信号として採用
+                        masterLocation.lastHeartbeat = Math.max(followerData.heartbeat || 0, followerData.timestamp || 0) || getSyncedNow();
                         updateDisplay();
                     }
                 }
@@ -478,8 +584,8 @@ async function startMasterSession(roomId) {
     }
 }
 
-document.getElementById('stop-master-btn').addEventListener('click', () => {
-    if (confirm('共有を終了しますか？燃え尽きて位置が特定されなくなります')) {
+document.getElementById('stop-master-btn').addEventListener('click', async () => {
+    if (await showConfirm('共有を終了しますか？燃え尽きて位置が特定されなくなります')) {
         db.ref(`rooms/${currentRoomId}`).remove();
         resetStateAndGoHome();
     }
@@ -498,6 +604,10 @@ document.getElementById('start-follow-btn').addEventListener('click', async () =
     const roomId = document.getElementById('room-id-input').value.trim();
     if (!roomId || roomId.length !== 6) return alert('6桁のビブルカード（番号）を入力してください');
     
+    // 権限チェック
+    const canProceed = await checkPlatformPermissions();
+    if (!canProceed) return;
+
     await startFollowerSession(roomId);
 });
 
@@ -509,7 +619,7 @@ async function startFollowerSession(roomId) {
         // 1. 最初に入力されたルームが存在するか一度だけ確認
         const initialSnapshot = await roomRef.once('value');
         if (!initialSnapshot.exists()) {
-            alert("存在しないビブルカードです。もう一度確認してください。");
+            alert("存在しないビブルカード（番号）です。もう一度確認してください。");
             return;
         }
 
@@ -539,31 +649,14 @@ async function startFollowerSession(roomId) {
 
             if (roomData.master) {
                 masterLocation = roomData.master;
-                // ハートビート情報の保存
-                masterLocation.lastHeartbeat = roomData.master.heartbeat || roomData.master.timestamp || getSyncedNow();
+                // heartbeat と timestamp のうち、より新しい方を生存信号として採用 (バックグラウンド対策)
+                masterLocation.lastHeartbeat = Math.max(roomData.master.heartbeat || 0, roomData.master.timestamp || 0) || getSyncedNow();
                 
                 updateDisplay();
                 showScreen('follower');
             } else {
                 connectionStatus.textContent = '相手のGPS信号を待っています...';
                 showScreen('follower');
-            }
-
-            // 双方向モード時の追加処理
-            if (roomType === 'bidirectional') {
-                document.getElementById('follower-bidirectional-controls').classList.remove('hidden');
-                document.getElementById('follower-bidirectional-tips').classList.remove('hidden');
-                startSendingFollowerLocation(roomRef);
-            } else {
-                // 通常モード時は確実に非表示にする
-                document.getElementById('follower-bidirectional-controls').classList.add('hidden');
-                document.getElementById('follower-bidirectional-tips').classList.add('hidden');
-                // 位置情報送信も停止
-                if (watchId && myMode === 'follower') {
-                    const BackgroundGeolocation = getCapPlugin('BackgroundGeolocation');
-                    if (BackgroundGeolocation) BackgroundGeolocation.removeWatcher({ id: watchId });
-                    watchId = null;
-                }
             }
         });
 
@@ -578,8 +671,8 @@ async function startFollowerSession(roomId) {
                 // 表示更新
                 updateDisplay();
 
-                // 10秒以上更新がなければ「燃え尽き」と判定
-                if (diff > 10000) {
+                // 60秒以上更新がなければ「燃え尽き」と判定 (iOSのサボりを考慮)
+                if (diff > 60000) {
                     console.log("Heartbeat lost (Synced). Diff:", diff);
                     clearInterval(watchdogInterval);
                     watchdogInterval = null;
@@ -605,12 +698,26 @@ async function startFollowerSession(roomId) {
                         backgroundTitle: "Vivre Card 稼働中",
                         requestPermissions: true,
                         stale: false,
-                        distanceFilter: 2
+                        distanceFilter: 0, // 感度最大
+                        showsBackgroundLocationIndicator: true // iOSバックグラウンド動作を安定化
                     },
                     function callback(location, error) {
                         if (error) return console.error(error);
                         if (location) {
                             myLocation = { lat: location.latitude, lng: location.longitude };
+
+                            // 双方向モードなら自分の位置をFirebaseに送信（マスター側の矢印を動かすため）
+                            if (roomType === 'bidirectional' && currentRoomId) {
+                                const myFollowerRef = db.ref(`rooms/${currentRoomId}/followers/${myUserId}`);
+                                const data = { 
+                                    lat: location.latitude, 
+                                    lng: location.longitude, 
+                                    timestamp: Date.now(),
+                                    heartbeat: getSyncedNow()
+                                };
+                                myFollowerRef.update(data);
+                            }
+
                             updateDisplay();
                         }
                     }
@@ -637,39 +744,6 @@ async function startFollowerSession(roomId) {
     } catch (e) {
         console.error("startFollowerSession Global Error:", e);
         alert("参加エラー: " + e.message);
-    }
-}
-
-function startSendingFollowerLocation(roomRef) {
-    if (watchId) return; // 既に開始済み
-
-    const myFollowerRef = roomRef.child('followers').child(myUserId);
-    const BackgroundGeolocation = getCapPlugin('BackgroundGeolocation');
-
-    if (BackgroundGeolocation) {
-        BackgroundGeolocation.addWatcher(
-            {
-                backgroundMessage: "双方向モードで位置を共有中...",
-                backgroundTitle: "Vivre Card 相互共有中",
-                requestPermissions: true,
-                stale: false,
-                distanceFilter: 2
-            },
-            function callback(location, error) {
-                if (error) return console.error(error);
-                if (location) {
-                    const data = { 
-                        lat: location.latitude, 
-                        lng: location.longitude, 
-                        timestamp: Date.now(),
-                        heartbeat: getSyncedNow()
-                    };
-                    myFollowerRef.update(data);
-                    myLocation = { lat: location.latitude, lng: location.longitude };
-                    updateDisplay();
-                }
-            }
-        ).then(id => { watchId = id; });
     }
 }
 
@@ -702,6 +776,9 @@ document.getElementById('stop-follow-btn').addEventListener('click', () => {
 
 // --- Logic ---
 function startOrientationTracking() {
+    if (isTrackingOrientation) return;
+    isTrackingOrientation = true;
+
     // Android (Chrome) 向け: 絶対方位イベントを優先
     if ('ondeviceorientationabsolute' in window) {
         window.addEventListener('deviceorientationabsolute', handleOrientation, true);
@@ -753,7 +830,7 @@ function updateDisplay() {
         if (currentConnectionStatus) currentConnectionStatus.textContent = '相手のGPS信号を待っています...';
         return;
     }
-    if (!myLocation.lat) {
+    if (myLocation.lat === null) {
         if (currentConnectionStatus) currentConnectionStatus.textContent = '自分のGPS信号を探しています...';
         return;
     }
@@ -771,7 +848,13 @@ function updateDisplay() {
     }
 
     if (currentVivreCard) currentVivreCard.style.transform = `rotate(${rotation}deg)`;
-    if (currentConnectionStatus) currentConnectionStatus.textContent = '導かれています';
+    
+    // 信号が届いていない間のメッセージ
+    if (signalAge > 5) {
+        if (currentConnectionStatus) currentConnectionStatus.textContent = `信号を探しています... (${signalAge}s)`;
+    } else {
+        if (currentConnectionStatus) currentConnectionStatus.textContent = '導かれています';
+    }
 
     // 距離
     const dist = calculateDistance(myLocation.lat, myLocation.lng, masterLocation.lat, masterLocation.lng);

@@ -126,8 +126,7 @@
 
                     <div class="help-section important">
                         <h3>【重要】<br>プライバシーを守るために</h3>
-                        <p>・共有を確実に止めるには、画面内の<strong>「共有を終了」または「終了」</strong>ボタンを押してください。</p>
-                        <p>・万が一誤ってアプリを強制終了（キル）した場合でも、通信が途切れて数分後には自動的に共有が解除されるのでご安心ください。</p>
+                        <p>共有を確実に止めるには、画面内の<strong>「共有を終了」または「終了」</strong>ボタンを押してください。</p>
                     </div>
                 </div>
             </div>
@@ -156,7 +155,7 @@
                     </div>
                 </div>
 
-                <div class="status-info">
+                <div class="status-info" style="margin-top: 15px;">
                     <!-- 通常モード用 -->
                     <div id="master-standard-status">
                         <h3 id="follower-count">0</h3>
@@ -172,13 +171,9 @@
                     </div>
                 </div>
                 
-                <div class="share-area" style="width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                <div class="share-area" style="width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 20px;">
                     <button id="share-code-btn" class="primary-btn" style="width: 80%;">ビブルカードを共有</button>
-                    <p class="annotation-text" style="margin-top: 0; padding: 0 20px; text-align: center;">集合のため、このビブルカード（番号）を仲間に伝えてください。</p>
-                </div>
-
-                <div class="bottom-tips">
-                    <p>位置情報を停止するには「共有を終了」してください。アプリを終了（キル）しても数分間、相手に位置が表示される場合があります。</p>
+                    <p class="annotation-text" style="margin-top: 12px; padding: 0 20px; text-align: center;">集合のため、このビブルカード（番号）を仲間に伝えてください。</p>
                 </div>
             </div>
         </div>
@@ -209,31 +204,18 @@
                     </div>
                     <p id="connection-status">相手の位置を探しています...</p>
                 </div>
-
-                <!-- 双方向モード用の共有・注意書きエリア (通常モード時は非表示) -->
-                <div id="follower-bidirectional-controls" class="hidden" style="width: 100%; margin-top: 30px;">
-                    <div class="share-area" style="width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px;">
-                        <button id="share-code-btn-follower" class="primary-btn" style="width: 80%;">ビブルカードを共有</button>
-                        <p class="annotation-text" style="margin-top: 0; padding: 0 20px; text-align: center;">集合のため、このビブルカード（番号）を仲間に伝えてください。</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 双方向モード用の注意書き (通常モード時は非表示) -->
-            <div id="follower-bidirectional-tips" class="bottom-tips hidden">
-                <p>位置情報を停止するには「終了」してください。アプリを終了（キル）しても数分間、相手に位置が表示される場合があります。</p>
             </div>
 
             <!-- デバッグ情報表示用 (一時的) -->
-            <div id="debug-info" style="font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 10px; font-family: monospace; text-align: center;"></div>
+            <div id="debug-info"></div>
         </div>
 
         <!-- 5. 燃え尽きる演出用オーバーレイ -->
         <div id="burn-overlay" class="screen hidden">
             <div class="burn-content">
                 <div class="ash-particles"></div>
-                <h2 class="gradient-text">カードが燃え尽きました</h2>
-                <p class="burn-supplement">（共有が終了しました）</p>
+                <h2 class="gradient-text">仲間のカードが燃え尽きました</h2>
+                <p class="burn-supplement">（共有が終了されました）</p>
                 <div class="menu-group">
                     <button id="burn-retry-btn" class="primary-btn">もう一度入力する</button>
                     <button id="burn-close-btn" class="secondary-btn">ホームへ戻る</button>
@@ -248,6 +230,17 @@
                 <div class="menu-group">
                     <button id="update-now-btn" class="primary-btn">今すぐ更新</button>
                     <button id="update-later-btn" class="secondary-btn">あとで</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Confirmation Overlay -->
+        <div id="confirm-overlay" class="screen hidden" style="background: rgba(0,0,0,0.8); z-index: 30000; justify-content: center; align-items: center;">
+            <div class="glass-card" style="max-width: 85%; text-align: center;">
+                <p id="confirm-message" style="margin-bottom: 24px; white-space: pre-wrap; line-height: 1.6;"></p>
+                <div class="menu-group">
+                    <button id="confirm-ok-btn" class="primary-btn">OK</button>
+                    <button id="confirm-cancel-btn" class="secondary-btn">キャンセル</button>
                 </div>
             </div>
         </div>
